@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#062b78" />
+  <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
+  <meta name="description"
+    content="Church management system for Presbyterian Church of Ghana, Resurrection Congregation." />
+  <title>Resurrection Congregation • Church Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="components/sidebar.css" />
+  <link rel="stylesheet" href="components/dashboard.css" />
+  <link rel="stylesheet" href="components/profile.css" />
+  <link rel="stylesheet" href="components/user-management.css" />
+</head>
+
+<body>
+  <div class="app-loading" id="appLoading">
+    <span class="loading-mark"><i data-lucide="shield-check"></i></span>
+    <strong>Securing your workspace</strong>
+    <small>Verifying administrator access...</small>
+  </div>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button class="icon-btn mobile-menu" id="menuBtn" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i
+            data-lucide="menu"></i></button>
+        <label class="global-search" for="globalSearch">
+          <i data-lucide="search"></i>
+          <input id="globalSearch" type="search" placeholder="Search members, events, transactions..."
+            autocomplete="off" />
+          <kbd>⌘ K</kbd>
+        </label>
+        <div class="topbar-actions">
+          <button class="icon-btn notification-btn" id="notificationBtn" aria-label="Notifications">
+            <i data-lucide="bell"></i><span class="notification-dot"></span>
+          </button>
+          <div id="profileMount"></div>
+        </div>
+      </header>
+
+      <main id="mainContent" tabindex="-1">
+        <section class="page active" id="page-dashboard" data-page-title="Dashboard">
+          <div class="page-heading welcome-heading">
+            <div>
+              <p class="eyebrow" id="todayLabel">RESURRECTION CONGREGATION</p>
+              <h2>Good morning, Admin.</h2>
+              <p>Your congregation overview, updated from live church records.</p>
+            </div>
+            <div class="dashboard-actions">
+              <button class="secondary-btn" data-action="add-attendance" data-requires="attendance.manage"><i data-lucide="clipboard-check"></i> Record attendance</button>
+              <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i data-lucide="user-plus"></i> Add member</button>
+            </div>
+          </div>
+
+          <div class="metric-grid" id="dashboardMetrics"></div>
+
+          <div class="dashboard-layout">
+            <article class="card dashboard-panel dashboard-attendance">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">SERVICE PARTICIPATION</p>
+                  <h3>Attendance trend</h3>
+                </div>
+                <button class="text-btn" data-action="add-attendance">Record service <i data-lucide="plus"></i></button>
+              </div>
+              <div class="attendance-summary"><strong id="lastAttendance">—</strong><span id="attendanceNote">No attendance records yet</span></div>
+              <div class="bar-chart" id="attendanceChart" aria-label="Attendance for the latest services"></div>
+              <div class="chart-axis" id="attendanceAxis"></div>
+            </article>
+
+            <article class="card dashboard-panel dashboard-events">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">NEXT ON THE CALENDAR</p>
+                  <h3>Upcoming programmes</h3>
+                </div><button class="text-btn" data-page="events">View all <i data-lucide="arrow-up-right"></i></button>
+              </div>
+              <div id="upcomingEvents" class="event-list"></div>
+            </article>
+
+            <article class="card dashboard-panel dashboard-membership">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">MEMBERSHIP HEALTH</p>
+                  <h3>Congregation profile</h3>
+                </div><button class="text-btn" data-page="members">Directory <i data-lucide="arrow-up-right"></i></button>
+              </div>
+              <div id="membershipHealth" class="membership-health"></div>
+            </article>
+
+            <article class="card dashboard-panel dashboard-giving">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">STEWARDSHIP</p>
+                  <h3>Monthly cash flow</h3>
+                </div><button class="text-btn" data-page="finance">Details <i data-lucide="arrow-up-right"></i></button>
+              </div>
+              <div class="cashflow-summary" id="cashflowSummary"></div>
+              <div class="cashflow-visual" id="cashflowVisual"></div>
+              <div class="giving-meta"><span>Transactions this month</span><strong id="givingTransactionCount">0</strong></div>
+            </article>
+
+            <article class="card dashboard-panel dashboard-activity">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">RECENT ACTIVITY</p>
+                  <h3>Latest updates</h3>
+                </div><span class="live-label"><i></i> Live</span>
+              </div>
+              <div id="activityList" class="activity-list"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-members" data-page-title="Membership">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Membership</p>
+              <h2>Membership directory</h2>
+              <p>Manage member records, groups, and pastoral care details.</p>
+            </div>
+            <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i data-lucide="user-plus"></i> Add new member</button>
+          </div>
+          <div class="summary-strip" id="memberSummary"></div>
+          <article class="card table-card">
+            <div class="table-toolbar">
+              <label class="inline-search"><i data-lucide="search"></i><input id="memberSearch" type="search"
+                  placeholder="Search members..." /></label>
+              <div class="toolbar-actions">
+                <select id="memberStatusFilter" aria-label="Filter by status">
+                  <option value="all">All statuses</option>
+                  <option>Active</option>
+                  <option>Visitor</option>
+                  <option>Inactive</option>
+                </select>
+                <button class="secondary-btn" id="exportMembers"><i data-lucide="download"></i> Export</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Contact</th>
+                    <th>Group</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="membersTable"></tbody>
+              </table>
+            </div>
+            <div class="table-footer"><span id="memberTableCount"></span>
+              <div class="pagination"><button disabled><i data-lucide="chevron-left"></i></button><button
+                  class="active">1</button><button disabled><i data-lucide="chevron-right"></i></button></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-finance" data-page-title="Finance">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Finance</p>
+              <h2>Finance & stewardship</h2>
+              <p>Track giving, expenses, funds, and church financial health.</p>
+            </div>
+            <button class="primary-btn" data-action="add-transaction" data-requires="finance.manage"><i data-lucide="plus"></i> Record
+              transaction</button>
+          </div>
+          <div class="metric-grid finance-metrics" id="financeMetrics"></div>
+          <div class="content-grid-wide">
+            <article class="card table-card">
+              <div class="card-heading table-heading">
+                <div>
+                  <p class="eyebrow">LEDGER</p>
+                  <h3>Recent transactions</h3>
+                </div><button class="secondary-btn" id="exportFinance"><i data-lucide="download"></i> Export</button>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Fund</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionsTable"></tbody>
+                </table>
+              </div>
+            </article>
+            <article class="card fund-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">ALLOCATION</p>
+                  <h3>Fund balances</h3>
+                </div>
+              </div>
+              <div id="fundBalances"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-events" data-page-title="Events">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Events</p>
+              <h2>Events & programmes</h2>
+              <p>Plan services, meetings, outreach, and fellowship activities.</p>
+            </div>
+            <button class="primary-btn" data-action="add-event" data-requires="events.manage"><i data-lucide="calendar-plus"></i> Create
+              event</button>
+          </div>
+          <div class="event-layout">
+            <article class="card mini-calendar">
+              <div class="calendar-title"><span></span><h3 id="calendarTitle"></h3><span></span></div>
+              <div class="calendar-week">
+                <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+              </div>
+              <div class="calendar-days" id="calendarDays"></div>
+            </article>
+            <article class="card schedule-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">UPCOMING</p>
+                  <h3>Programme schedule</h3>
+                </div><select id="eventTypeFilter">
+                  <option value="all">All events</option>
+                  <option>Worship</option>
+                  <option>Meeting</option>
+                  <option>Outreach</option>
+                  <option>Fellowship</option>
+                </select>
+              </div>
+              <div id="eventsSchedule"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-reports" data-page-title="Reports">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Reports</p>
+              <h2>Reports & insights</h2>
+              <p>Understand growth, participation, and stewardship at a glance.</p>
+            </div>
+            <button class="secondary-btn" id="printReport"><i data-lucide="printer"></i> Print report</button>
+          </div>
+          <div class="report-grid" id="reportCards"></div>
+          <div class="dashboard-grid report-details">
+            <article class="card attendance-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">GROWTH</p>
+                  <h3>Membership by month</h3>
+                </div>
+              </div>
+              <div class="line-chart" id="growthChart"></div>
+              <div class="chart-axis" id="growthAxis"></div>
+            </article>
+            <article class="card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">DEMOGRAPHICS</p>
+                  <h3>Membership profile</h3>
+                </div>
+              </div>
+              <div id="demographics" class="demographics"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="page-users" data-page-title="Users & roles">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Administration</p>
+              <h2>Users & roles</h2>
+              <p>Create administrator accounts and control what each role can access.</p>
+            </div>
+            <button class="primary-btn" id="addUserBtn" data-requires="users.manage"><i data-lucide="user-plus"></i> Add administrator</button>
+          </div>
+
+          <div class="user-metrics" id="userMetrics"></div>
+
+          <div class="user-management-layout">
+            <article class="card table-card users-card">
+              <div class="table-toolbar">
+                <label class="inline-search"><i data-lucide="search"></i><input id="userSearch" type="search" placeholder="Search administrators..." /></label>
+                <div class="toolbar-actions">
+                  <select id="userRoleFilter" aria-label="Filter users by role"><option value="all">All roles</option></select>
+                  <select id="userStatusFilter" aria-label="Filter users by status"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+                </div>
+              </div>
+              <div class="table-scroll">
+                <table>
+                  <thead><tr><th>Administrator</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr></thead>
+                  <tbody id="usersTable"></tbody>
+                </table>
+              </div>
+              <div class="table-footer"><span id="userTableCount">Loading administrators...</span></div>
+            </article>
+
+            <aside class="card roles-card">
+              <div class="roles-heading">
+                <div><p class="eyebrow">ACCESS CONTROL</p><h3>Roles</h3></div>
+                <button class="icon-btn" id="addRoleBtn" data-requires="roles.manage" aria-label="Create role"><i data-lucide="plus"></i></button>
+              </div>
+              <p class="roles-intro">Roles group permissions so access stays consistent as your team changes.</p>
+              <div class="roles-list" id="rolesList"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="page" id="page-settings" data-page-title="Settings">
+          <div class="page-heading">
+            <div>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Settings</p>
+              <h2>System settings</h2>
+              <p>Manage congregation information and administrator access.</p>
+            </div>
+          </div>
+          <div class="settings-grid">
+            <article class="card settings-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">PROFILE</p>
+                  <h3>Congregation details</h3>
+                </div>
+              </div>
+              <form id="churchSettingsForm"><label>Church name<input name="churchName"
+                    value="Presbyterian Church of Ghana" /></label><label>Congregation<input name="congregation"
+                    value="Resurrection Congregation" /></label><label>District<input name="district"
+                    placeholder="Enter district" /></label><label>Office email<input name="email" type="email"
+                    placeholder="office@example.org" /></label><button class="primary-btn" type="submit">Save
+                  details</button></form>
+            </article>
+            <article class="card settings-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">ACCOUNT & DATA</p>
+                  <h3>Administrator access</h3>
+                </div><span class="status-pill neutral" id="connectionBadge">Not connected</span>
+              </div>
+              <div class="connection-overview"><span class="connection-icon"><i data-lucide="cloud-check"></i></span>
+                <div><strong id="connectionTitle">Checking data connection</strong>
+                  <p id="connectionMessage">Confirming secure access to church records.</p>
+                </div>
+              </div>
+              <form id="authForm" class="auth-form">
+                <div class="auth-heading"><strong>Administrator account</strong><span id="authHint">Checking account...</span></div>
+                <div class="signed-in-account" id="signedInAccount" hidden><span class="signed-in-avatar" id="settingsAvatar">CA</span><div><strong id="signedInName">Church Admin</strong><span id="signedInEmail"></span></div><i data-lucide="badge-check"></i></div>
+                <div class="auth-credentials" id="authCredentials"><label>Email<input name="email" type="email" autocomplete="username"
+                    placeholder="admin@example.org" /></label><label>Password<input name="password" type="password"
+                    autocomplete="current-password" placeholder="••••••••" /></label></div>
+                <div class="form-actions"><button class="secondary-btn" type="button" id="signOutBtn" hidden>Sign
+                    out</button><button class="primary-btn" type="submit" id="signInBtn">Sign in</button></div>
+              </form>
+              <details class="advanced-settings">
+                <summary><span><i data-lucide="square-terminal"></i><strong>Developer connection settings</strong></span><i data-lucide="chevron-down"></i></summary>
+                <div class="advanced-settings-body"><p>Only change these values when moving the system to another database project.</p>
+                  <form id="supabaseForm"><label>Project URL<input name="url" type="url"
+                        placeholder="https://your-project.supabase.co" /></label><label>Publishable key<input name="key"
+                        type="password" placeholder="sb_publishable_..." /></label>
+                    <div class="form-actions"><button class="secondary-btn" type="button" id="testConnection">Test connection</button><button class="primary-btn" type="submit">Save</button></div>
+                  </form><p class="config-help">Deployment defaults are stored in <code>config.js</code>.</p>
+                </div>
+              </details>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="mobile-overlay" id="mobileOverlay"></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+
+  <div class="popover notifications" id="notificationPanel" hidden>
+    <div class="popover-title"><strong>Notifications</strong><button class="text-btn" id="markRead">Mark all
+        read</button></div>
+    <div id="notificationsList"></div>
+  </div>
+
+  <dialog id="entryDialog">
+    <form method="dialog" id="entryForm">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow" id="dialogEyebrow">NEW RECORD</p>
+          <h3 id="dialogTitle">Add new member</h3>
+        </div><button class="icon-btn" type="button" data-close-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body" id="dialogFields"></div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-dialog>Cancel</button><button
+          class="primary-btn" type="submit" id="dialogSubmit">Save record</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="userDialog" class="management-dialog">
+    <form id="userForm">
+      <div class="dialog-header">
+        <div><p class="eyebrow" id="userDialogEyebrow">NEW ACCOUNT</p><h3 id="userDialogTitle">Add administrator</h3></div>
+        <button class="icon-btn" type="button" data-close-user-dialog aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body user-form-body">
+        <input type="hidden" name="user_id" />
+        <label class="full">Full name<input name="display_name" required placeholder="e.g. Ama Mensah" /></label>
+        <label class="full">Email address<input name="email" type="email" autocomplete="off" required placeholder="name@example.com" /></label>
+        <label>Phone number<input name="phone" type="tel" placeholder="024 000 0000" /></label>
+        <label>Role<select name="role_id" required></select></label>
+        <label class="full create-password-field">Temporary password<span class="password-field"><input name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" /><button type="button" id="generatePassword">Generate</button></span><small>Give this password to the administrator securely.</small></label>
+        <label class="full edit-status-field" hidden>Status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+      </div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-user-dialog>Cancel</button><button class="primary-btn" id="saveUserBtn" type="submit">Create account</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="roleDialog" class="management-dialog role-dialog">
+    <form id="roleForm">
+      <div class="dialog-header">
+        <div><p class="eyebrow">ACCESS ROLE</p><h3 id="roleDialogTitle">Create role</h3></div>
+        <button class="icon-btn" type="button" data-close-role-dialog aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body role-form-body">
+        <input type="hidden" name="role_id" />
+        <label class="full">Role name<input name="name" required placeholder="e.g. Ministry Coordinator" /></label>
+        <label class="full">Description<textarea name="description" placeholder="Describe who should receive this role"></textarea></label>
+        <fieldset class="full permission-fieldset"><legend>Permissions</legend><div id="permissionOptions"></div></fieldset>
+      </div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-role-dialog>Cancel</button><button class="primary-btn" id="saveRoleBtn" type="submit">Save role</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="passwordDialog" class="management-dialog password-dialog">
+    <form id="passwordForm">
+      <div class="dialog-header"><div><p class="eyebrow">ACCOUNT SECURITY</p><h3>Set temporary password</h3></div><button class="icon-btn" type="button" data-close-password-dialog aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="dialog-body"><input type="hidden" name="user_id" /><label class="full">New password<input name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters" /></label><p class="full dialog-note">The administrator can use this password immediately on the sign-in page.</p></div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-password-dialog>Cancel</button><button class="primary-btn" type="submit">Update password</button></div>
+    </form>
+  </dialog>
+
+  <script src="components/sidebar.js"></script>
+  <script src="components/profile.js"></script>
+  <script src="components/user-management.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>

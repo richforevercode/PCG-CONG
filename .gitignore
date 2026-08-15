@@ -1,0 +1,14 @@
+# Supabase CLI local metadata
+supabase/.temp/
+
+# Local environment and editor files
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini

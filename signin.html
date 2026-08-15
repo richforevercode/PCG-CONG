@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#062b78" />
+  <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
+  <meta name="description" content="Administrator sign in for Presbyterian Church of Ghana, Resurrection Congregation." />
+  <title>Sign in | Resurrection Congregation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="components/signin.css" />
+</head>
+<body>
+  <main class="signin-shell">
+    <section class="signin-brand" aria-label="Resurrection Congregation">
+      <div class="brand-glow brand-glow-one"></div>
+      <div class="brand-glow brand-glow-two"></div>
+      <div class="signin-brand-content">
+        <div class="signin-logo" aria-hidden="true">
+          <img src="assets/pcg-crest.png" alt="" />
+        </div>
+        <p class="brand-kicker">Presbyterian Church of Ghana</p>
+        <h1>Resurrection<br />Congregation</h1>
+        <p class="brand-message">One congregation, thoughtfully administered.</p>
+        <div class="brand-divider"></div>
+        <p class="brand-verse">“Let all things be done decently and in order.”</p>
+        <span class="brand-reference">1 Corinthians 14:40</span>
+      </div>
+      <p class="brand-footer">Church Management System</p>
+    </section>
+
+    <section class="signin-panel">
+      <div class="mobile-brand">
+        <span class="mobile-mark"><img src="assets/pcg-crest.png" alt="" /></span>
+        <div><strong>Resurrection Congregation</strong><small>Presbyterian Church of Ghana</small></div>
+      </div>
+
+      <div class="signin-card">
+        <div class="signin-heading">
+          <span class="secure-badge"><i data-lucide="shield-check"></i> Secure administrator access</span>
+          <h2>Welcome back</h2>
+          <p>Sign in with the account provided by your system administrator.</p>
+        </div>
+
+        <div class="signin-alert" id="signinAlert" role="alert" hidden>
+          <i data-lucide="circle-alert"></i><span></span>
+        </div>
+
+        <form id="signinForm" novalidate>
+          <label>Email address
+            <span class="input-control"><i data-lucide="mail"></i><input name="email" type="email" autocomplete="username" placeholder="name@example.com" required /></span>
+          </label>
+          <label>Password
+            <span class="input-control"><i data-lucide="lock-keyhole"></i><input name="password" id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter your password" minlength="8" required /><button type="button" id="togglePassword" aria-label="Show password"><i data-lucide="eye"></i></button></span>
+          </label>
+          <button class="signin-button" id="signinButton" type="submit"><span>Sign in to dashboard</span><i data-lucide="arrow-right"></i></button>
+        </form>
+
+        <div class="signin-help">
+          <i data-lucide="circle-help"></i>
+          <p><strong>Need access?</strong><span>Contact a Super Administrator to create or reactivate your account.</span></p>
+        </div>
+      </div>
+      <p class="signin-copyright">© <span id="signinYear"></span> Resurrection Congregation</p>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="components/signin.js"></script>
+</body>
+</html>
