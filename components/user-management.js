@@ -69,7 +69,8 @@
       const role = roleFor(user);
       const isCurrent = user.id === state.userId;
       const manageable = can("roles.manage") || !role?.permissions?.includes("roles.manage");
-      const actions = manageable ? `<div class="row-actions"><button class="icon-btn" data-edit-user="${user.id}" aria-label="Edit ${esc(user.display_name)}"><i data-lucide="pencil"></i></button><button class="icon-btn" data-password-user="${user.id}" aria-label="Set password for ${esc(user.display_name)}"><i data-lucide="key-round"></i></button></div>` : `<span class="protected-account" title="Protected Super Administrator"><i data-lucide="lock-keyhole"></i></span>`;
+      const deleteAction = can("roles.manage") && !isCurrent ? `<button class="icon-btn delete" data-delete-user="${user.id}" aria-label="Delete ${esc(user.display_name)}"><i data-lucide="trash-2"></i></button>` : "";
+      const actions = manageable ? `<div class="row-actions"><button class="icon-btn" data-edit-user="${user.id}" aria-label="Edit ${esc(user.display_name)}"><i data-lucide="pencil"></i></button><button class="icon-btn" data-password-user="${user.id}" aria-label="Set password for ${esc(user.display_name)}"><i data-lucide="key-round"></i></button>${deleteAction}</div>` : `<span class="protected-account" title="Protected Super Administrator"><i data-lucide="lock-keyhole"></i></span>`;
       return `<tr><td><div class="member-cell"><span class="user-avatar">${esc(initials(user.display_name))}</span><div><strong>${esc(user.display_name || "Unnamed user")}${isCurrent ? '<span class="current-user-label">You</span>' : ""}</strong><small>${esc(user.email)}</small></div></div></td><td><span class="role-name">${esc(role?.name || "No role")}</span></td><td><span class="status-pill ${user.status}">${user.status === "active" ? "Active" : "Inactive"}</span></td><td>${new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short", year: "numeric" }).format(new Date(user.created_at))}</td><td>${actions}</td></tr>`;
     }).join("") : `<tr><td colspan="5" class="users-empty"><i data-lucide="user-round-search"></i><strong>No administrators found</strong><span>Try changing the search or filter.</span></td></tr>`;
     $("#userTableCount").textContent = `Showing ${users.length} of ${state.users.length} administrator${state.users.length === 1 ? "" : "s"}`;
@@ -79,13 +80,9 @@
   function renderRoles() {
     $("#rolesList").innerHTML = state.roles.map(role => {
       const userCount = state.users.filter(user => user.role_id === role.id).length;
-      const protectedRole = role.permissions.includes("roles.manage");
-      let actions = `<span class="role-system">${role.is_system ? "System" : "Custom"}</span>`;
-      if (can("roles.manage")) {
-        actions = protectedRole
-          ? `<span class="role-system">Protected</span>`
-          : `<div class="role-actions">${role.is_system ? '<span class="role-system">System</span>' : `<button class="icon-btn" data-edit-role="${role.id}" aria-label="Edit ${esc(role.name)}"><i data-lucide="pencil"></i></button>`}<button class="icon-btn delete" data-delete-role="${role.id}" aria-label="Delete ${esc(role.name)}"><i data-lucide="trash-2"></i></button></div>`;
-      }
+      const actions = role.is_system || !can("roles.manage")
+        ? `<span class="role-system">${role.is_system ? "System" : "Custom"}</span>`
+        : `<div class="role-actions"><button class="icon-btn" data-edit-role="${role.id}" aria-label="Edit ${esc(role.name)}"><i data-lucide="pencil"></i></button><button class="icon-btn delete" data-delete-role="${role.id}" aria-label="Delete ${esc(role.name)}"><i data-lucide="trash-2"></i></button></div>`;
       return `<div class="role-item"><span class="role-icon"><i data-lucide="shield"></i></span><div><strong>${esc(role.name)}</strong><small>${userCount} user${userCount === 1 ? "" : "s"} · ${role.permissions.length} permissions</small></div>${actions}</div>`;
     }).join("");
     refreshIcons();
@@ -202,15 +199,25 @@
 
   async function deleteRole(roleId) {
     const role = state.roles.find(item => item.id === roleId);
-    if (!role || !can("roles.manage")) return;
-    if (role.permissions.includes("roles.manage")) return notify("A role with Super Administrator access cannot be deleted.", "error");
-    const userCount = state.users.filter(user => user.role_id === role.id).length;
-    if (userCount) return notify(`Move ${userCount} administrator${userCount === 1 ? "" : "s"} out of this role before deleting it.`, "error");
-    if (!confirm(`Delete the ${role.name} role? This cannot be undone.`)) return;
+    if (!role || role.is_system || !confirm(`Delete the ${role.name} role?`)) return;
     const { error } = await state.client.from("app_roles").delete().eq("id", roleId);
     if (error) return notify(error.code === "23503" ? "Move users out of this role before deleting it." : error.message, "error");
     notify("Role deleted.");
     await load();
+  }
+
+  async function deleteUser(userId) {
+    const user = state.users.find(item => item.id === userId);
+    if (!user || !can("roles.manage")) return;
+    if (user.id === state.userId) return notify("You cannot delete your own account.", "error");
+    if (!confirm(`Permanently delete ${user.display_name || user.email}? This will remove their sign-in access and cannot be undone.`)) return;
+    try {
+      await invoke({ action: "delete", user_id: user.id });
+      notify("Administrator account deleted.");
+      await load();
+    } catch (error) {
+      notify(error.message || "Unable to delete the administrator.", "error");
+    }
   }
 
   async function savePassword(event) {
@@ -253,6 +260,8 @@
         $("#passwordForm [name=user_id]").value = passwordUserId;
         $("#passwordDialog").showModal();
       }
+      const deleteUserId = event.target.closest("[data-delete-user]")?.dataset.deleteUser;
+      if (deleteUserId) deleteUser(deleteUserId);
       const editRoleId = event.target.closest("[data-edit-role]")?.dataset.editRole;
       if (editRoleId) openRoleDialog(state.roles.find(role => role.id === editRoleId));
       const deleteRoleId = event.target.closest("[data-delete-role]")?.dataset.deleteRole;

@@ -149,6 +149,35 @@ Deno.serve(async (request) => {
       return json({ success: true });
     }
 
+    if (action === "delete") {
+      const userId = String(payload.user_id || "");
+      if (!userId) return json({ error: "A user is required." }, 400);
+      if (!callerPermissions.includes("roles.manage")) {
+        return json({ error: "Only a Super Administrator can delete users." }, 403);
+      }
+      if (userId === authData.user.id) {
+        return json({ error: "You cannot delete your own account." }, 400);
+      }
+
+      const { target, isPrivileged } = await protectPrivilegedTarget(userId);
+      if (isPrivileged && target.status === "active") {
+        const { data: activeProfiles, error: activeProfilesError } = await admin
+          .from("user_profiles")
+          .select("id,app_roles(permissions)")
+          .eq("status", "active");
+        if (activeProfilesError) return json({ error: activeProfilesError.message }, 400);
+        const privilegedCount = (activeProfiles || []).filter((profile) => {
+          const profileRole = Array.isArray(profile.app_roles) ? profile.app_roles[0] : profile.app_roles;
+          return (profileRole?.permissions || []).includes("roles.manage");
+        }).length;
+        if (privilegedCount <= 1) return json({ error: "At least one active Super Administrator must remain." }, 400);
+      }
+
+      const { error } = await admin.auth.admin.deleteUser(userId);
+      if (error) return json({ error: error.message }, 400);
+      return json({ success: true });
+    }
+
     if (action === "password") {
       const userId = String(payload.user_id || "");
       const password = String(payload.password || "");
