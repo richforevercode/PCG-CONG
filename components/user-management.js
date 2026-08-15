@@ -79,9 +79,13 @@
   function renderRoles() {
     $("#rolesList").innerHTML = state.roles.map(role => {
       const userCount = state.users.filter(user => user.role_id === role.id).length;
-      const actions = role.is_system || !can("roles.manage")
-        ? `<span class="role-system">${role.is_system ? "System" : "Custom"}</span>`
-        : `<div class="role-actions"><button class="icon-btn" data-edit-role="${role.id}" aria-label="Edit ${esc(role.name)}"><i data-lucide="pencil"></i></button><button class="icon-btn delete" data-delete-role="${role.id}" aria-label="Delete ${esc(role.name)}"><i data-lucide="trash-2"></i></button></div>`;
+      const protectedRole = role.permissions.includes("roles.manage");
+      let actions = `<span class="role-system">${role.is_system ? "System" : "Custom"}</span>`;
+      if (can("roles.manage")) {
+        actions = protectedRole
+          ? `<span class="role-system">Protected</span>`
+          : `<div class="role-actions">${role.is_system ? '<span class="role-system">System</span>' : `<button class="icon-btn" data-edit-role="${role.id}" aria-label="Edit ${esc(role.name)}"><i data-lucide="pencil"></i></button>`}<button class="icon-btn delete" data-delete-role="${role.id}" aria-label="Delete ${esc(role.name)}"><i data-lucide="trash-2"></i></button></div>`;
+      }
       return `<div class="role-item"><span class="role-icon"><i data-lucide="shield"></i></span><div><strong>${esc(role.name)}</strong><small>${userCount} user${userCount === 1 ? "" : "s"} · ${role.permissions.length} permissions</small></div>${actions}</div>`;
     }).join("");
     refreshIcons();
@@ -198,7 +202,11 @@
 
   async function deleteRole(roleId) {
     const role = state.roles.find(item => item.id === roleId);
-    if (!role || role.is_system || !confirm(`Delete the ${role.name} role?`)) return;
+    if (!role || !can("roles.manage")) return;
+    if (role.permissions.includes("roles.manage")) return notify("A role with Super Administrator access cannot be deleted.", "error");
+    const userCount = state.users.filter(user => user.role_id === role.id).length;
+    if (userCount) return notify(`Move ${userCount} administrator${userCount === 1 ? "" : "s"} out of this role before deleting it.`, "error");
+    if (!confirm(`Delete the ${role.name} role? This cannot be undone.`)) return;
     const { error } = await state.client.from("app_roles").delete().eq("id", roleId);
     if (error) return notify(error.code === "23503" ? "Move users out of this role before deleting it." : error.message, "error");
     notify("Role deleted.");
