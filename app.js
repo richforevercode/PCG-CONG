@@ -4,6 +4,7 @@
   const money = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS", maximumFractionDigits: 0 });
   const dateFormat = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short", year: "numeric" });
   const shortDate = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short" });
+  const nameCollator = new Intl.Collator("en-GH", { sensitivity: "base" });
 
   const seed = { members: [], transactions: [], events: [], attendance_records: [] };
   const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -204,7 +205,7 @@
     const filtered = state.members.filter(member => {
       const haystack = `${fullName(member)} ${member.email} ${member.phone} ${member.group_name} ${member.role}`.toLowerCase();
       return (!query || haystack.includes(query)) && (status === "all" || member.status === status);
-    });
+    }).sort((a, b) => nameCollator.compare(fullName(a), fullName(b)));
     const statuses = [
       ["All members", state.members.length, "#0a3995"],
       ["Active", state.members.filter(m => m.status === "Active").length, "#087a38"],
