@@ -334,7 +334,7 @@
       <label>Gender<select name="gender" required>${options(["Female", "Male"], member.gender)}</select></label>
       <label>Phone<input name="phone" required value="${esc(member.phone)}" placeholder="024 000 0000" /></label>
       <label class="full">Email address<input name="email" type="email" value="${esc(member.email)}" placeholder="member@example.com" /></label>
-      <label>Group / ministry<select name="group_name">${options(["Women's Fellowship", "Men's Fellowship", "Youth Ministry", "Young Adults", "Choir", "Children's Ministry", "Bible Study"], member.group_name)}</select></label>
+      <label>Group / ministry<select name="group_name">${options(["Children Service", "Junior Youth (JY)", "Young People's Guild (YPG)", "Young Adult Fellowship (YAF)", "Women's Fellowship", "Men's Fellowship"], member.group_name)}</select></label>
       <label>Role<select name="role">${options(["Member", "Leader", "Elder", "Deacon", "Teacher"], member.role || "Member")}</select></label>
       <label>Status<select name="status">${options(["Active", "Visitor", "Inactive"], member.status || "Active")}</select></label>
       <label>Date joined<input name="joined_at" type="date" value="${esc(member.joined_at || todayIso())}" /></label>`;
