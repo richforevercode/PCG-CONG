@@ -3,12 +3,14 @@
 
   const money = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS", maximumFractionDigits: 0 });
   const dateFormat = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short", year: "numeric" });
+  const longDateFormat = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "long", year: "numeric" });
   const shortDate = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short" });
   const nameCollator = new Intl.Collator("en-GH", { sensitivity: "base" });
 
   const seed = { members: [], transactions: [], events: [], attendance_records: [] };
   const todayIso = () => new Date().toISOString().slice(0, 10);
   const monthKey = (date = new Date()) => date.toISOString().slice(0, 7);
+  let lastClassificationDate = todayIso();
 
   const state = {
     page: "dashboard",
@@ -21,9 +23,14 @@
     transactions: [],
     events: [],
     attendance_records: [],
+    member_attendance_records: [],
     dialogType: null,
     editingId: null,
-    userManagementInitialized: false
+    viewingMemberId: null,
+    userManagementInitialized: false,
+    generationalGroupsInitialized: false,
+    attendanceInitialized: false,
+    financeInitialized: false
   };
 
   const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -32,11 +39,29 @@
   const esc = (value = "") => String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
   const initials = person => `${person.first_name?.[0] || ""}${person.last_name?.[0] || ""}`.toUpperCase();
   const fullName = person => `${person.first_name || ""} ${person.last_name || ""}`.trim();
+  const memberClassification = member => window.GenerationalGroups?.classify(member) || { age: null, code: "rules-unavailable", group: null, matches: [] };
   const refreshIcons = () => window.lucide?.createIcons({ attrs: { "stroke-width": 1.8 } });
   const hasPermission = permission => state.permissions.includes(permission);
+
+  function classificationPresentation(classification) {
+    if (classification.code === "matched") return { label: classification.group.name, note: `Age ${classification.age}`, warning: false };
+    if (classification.code === "missing-date") return { label: "Date of birth required", note: "Not yet classified", warning: true };
+    if (classification.code === "invalid-date") return { label: "Invalid date of birth", note: "Review member record", warning: true };
+    if (classification.code === "future-date") return { label: "Future date of birth", note: "Review member record", warning: true };
+    if (classification.code === "multiple-matches") return { label: "Configuration conflict", note: `${classification.matches.length} rules match`, warning: true };
+    if (classification.code === "rules-unavailable") return { label: "Rules unavailable", note: "Configuration not loaded", warning: true };
+    return { label: "No matching active group", note: classification.age === null ? "Not classified" : `Age ${classification.age}`, warning: true };
+  }
+
+  function formatMemberDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return "Not provided";
+    const date = new Date(`${value}T00:00:00`);
+    return Number.isNaN(date.getTime()) ? "Invalid date" : longDateFormat.format(date);
+  }
   const pagePermissions = {
     dashboard: "dashboard.view",
     members: "members.view",
+    attendance: "attendance.view",
     finance: "finance.view",
     events: "events.view",
     reports: "reports.view",
@@ -129,7 +154,7 @@
     $$('[data-action="add-transaction"]').forEach(element => { element.hidden = !hasPermission("finance.manage"); });
     $$('[data-action="add-event"]').forEach(element => { element.hidden = !hasPermission("events.manage"); });
     $$('[data-action="add-attendance"]').forEach(element => { element.hidden = !hasPermission("attendance.manage"); });
-    $("#quickAddBtn").hidden = !["members.manage", "finance.manage", "events.manage"].some(hasPermission);
+    $("#quickAddBtn").hidden = !["members.manage", "attendance.manage", "finance.manage", "events.manage"].some(hasPermission);
     const settingsProfileAction = $('[data-profile-action="settings"]');
     if (settingsProfileAction) settingsProfileAction.hidden = !hasPermission("settings.manage");
   }
@@ -149,19 +174,33 @@
     const visitors = state.members.filter(m => m.status === "Visitor").length;
     const inactive = state.members.filter(m => m.status === "Inactive").length;
     const monthTransactions = state.transactions.filter(t => t.transaction_date?.startsWith(currentMonth));
-    const income = monthTransactions.filter(t => t.type === "Income").reduce((sum, t) => sum + Number(t.amount), 0);
+    const financeData = window.FinanceModule?.getData();
+    const monthCollections = (financeData?.collections || []).filter(record => record.collection_date?.startsWith(currentMonth) && !["Pending", "Voided"].includes(record.status));
+    const income = monthCollections.length
+      ? monthCollections.reduce((sum, record) => sum + Number(record.amount || 0), 0)
+      : monthTransactions.filter(t => t.type === "Income").reduce((sum, t) => sum + Number(t.amount), 0);
     const expenses = monthTransactions.filter(t => t.type === "Expense").reduce((sum, t) => sum + Number(t.amount), 0);
     const upcoming = state.events.filter(e => e.event_date >= today && e.event_date <= horizon);
     $("#dashboardMetrics").innerHTML = [
       metricCard("Total membership", state.members.length, state.members.length ? `${Math.round(active / state.members.length * 100)}% currently active` : "No members recorded", "users", "#0a3995"),
       metricCard("New this month", state.members.filter(m => m.joined_at?.startsWith(currentMonth)).length, `${visitors} visitor${visitors === 1 ? "" : "s"} awaiting follow-up`, "user-plus", "#d80011"),
-      metricCard("Giving this month", money.format(income), `${monthTransactions.length} transaction${monthTransactions.length === 1 ? "" : "s"}`, "hand-coins", "#087a38"),
+      metricCard("Giving this month", money.format(income), `${monthCollections.length || monthTransactions.length} record${(monthCollections.length || monthTransactions.length) === 1 ? "" : "s"}`, "hand-coins", "#087a38"),
       metricCard("Upcoming events", upcoming.length, "Next 30 days", "calendar-days", "#b54708")
     ].join("");
-    const attendance = state.attendance_records.slice().sort((a, b) => a.service_date.localeCompare(b.service_date)).slice(-7);
+    const memberAttendanceSessions = new Map();
+    state.member_attendance_records.forEach(record => {
+      const key = `${record.attendance_date}|${record.event_id}`;
+      const event = Array.isArray(record.events) ? record.events[0] : record.events;
+      if (!memberAttendanceSessions.has(key)) memberAttendanceSessions.set(key, { service_date: record.attendance_date, service_name: event?.title || "Service or event", total: 0 });
+      if (record.status === "Present") memberAttendanceSessions.get(key).total += 1;
+    });
+    const liveAttendance = Array.from(memberAttendanceSessions.values()).sort((a, b) => a.service_date.localeCompare(b.service_date)).slice(-7);
+    const attendance = liveAttendance.length
+      ? liveAttendance
+      : state.attendance_records.slice().sort((a, b) => a.service_date.localeCompare(b.service_date)).slice(-7).map(record => ({ ...record, total: Number(record.adults || 0) + Number(record.children || 0) + Number(record.visitors || 0) }));
     if (attendance.length) {
       const latest = attendance[attendance.length - 1];
-      const totals = attendance.map(record => Number(record.adults || 0) + Number(record.children || 0) + Number(record.visitors || 0));
+      const totals = attendance.map(record => Number(record.total || 0));
       const maxAttendance = Math.max(...totals, 1);
       $("#lastAttendance").textContent = totals[totals.length - 1];
       $("#attendanceNote").textContent = `${latest.service_name} · ${shortDate.format(new Date(`${latest.service_date}T00:00:00`))}`;
@@ -203,7 +242,8 @@
     const query = $("#memberSearch")?.value.trim().toLowerCase() || "";
     const status = $("#memberStatusFilter")?.value || "all";
     const filtered = state.members.filter(member => {
-      const haystack = `${fullName(member)} ${member.email} ${member.phone} ${member.group_name} ${member.role}`.toLowerCase();
+      const classification = classificationPresentation(memberClassification(member));
+      const haystack = `${fullName(member)} ${member.email} ${member.phone} ${member.group_name} ${classification.label} ${member.role}`.toLowerCase();
       return (!query || haystack.includes(query)) && (status === "all" || member.status === status);
     }).sort((a, b) => nameCollator.compare(fullName(a), fullName(b)));
     const statuses = [
@@ -213,36 +253,41 @@
       ["Inactive", state.members.filter(m => m.status === "Inactive").length, "#98a2b3"]
     ];
     $("#memberSummary").innerHTML = statuses.map(([label, count, color]) => `<div class="summary-item"><span class="summary-dot" style="--dot:${color}"></span><div><strong>${count}</strong><span>${label}</span></div></div>`).join("");
+    const configuredGroups = window.GenerationalGroups?.getGroups().filter(group => group.status === "Active") || [];
+    const groupCounts = new Map(configuredGroups.map(group => [group.id, 0]));
+    let unclassified = 0;
+    state.members.forEach(member => {
+      const classification = memberClassification(member);
+      if (classification.code === "matched") groupCounts.set(classification.group.id, (groupCounts.get(classification.group.id) || 0) + 1);
+      else unclassified += 1;
+    });
+    const generationSummary = $("#memberGenerationalSummary");
+    if (generationSummary) {
+      const rulesReady = window.GenerationalGroups?.getStatus() === "ready";
+      generationSummary.innerHTML = configuredGroups.length
+        ? [
+          ...configuredGroups.map(group => `<div class="generational-summary-item" title="${esc(window.GenerationalGroups.formatAgeRange(group))}, ${esc(group.gender)}"><strong>${groupCounts.get(group.id) || 0}</strong><span>${esc(group.name)}</span></div>`),
+          ...(unclassified ? [`<div class="generational-summary-item"><strong>${unclassified}</strong><span>Not currently classified</span></div>`] : [])
+        ].join("")
+        : `<p class="generational-summary-empty">${rulesReady ? "No active generational group rules are configured." : "Generational group rules are currently unavailable."}</p>`;
+    }
     $("#memberNavCount").textContent = state.members.length;
     $("#memberTableCount").textContent = `Showing ${filtered.length} of ${state.members.length} members`;
-    $("#membersTable").innerHTML = filtered.length ? filtered.map(member => `<tr>
-      <td><div class="member-cell"><span class="avatar">${initials(member)}</span><div><strong>${esc(fullName(member))}</strong><small>${esc(member.gender)}</small></div></div></td>
-      <td><span>${esc(member.phone)}</span><small class="cell-subtext">${esc(member.email)}</small></td>
-      <td>${esc(member.group_name || "—")}</td><td>${esc(member.role)}</td>
-      <td><span class="status-pill ${member.status.toLowerCase()}">${esc(member.status)}</span></td>
-      <td>${hasPermission("members.manage") ? `<div class="row-actions"><button class="icon-btn" data-edit-member="${member.id}" aria-label="Edit ${esc(fullName(member))}"><i data-lucide="pencil"></i></button><button class="icon-btn delete" data-delete-member="${member.id}" aria-label="Delete ${esc(fullName(member))}"><i data-lucide="trash-2"></i></button></div>` : ""}</td>
-    </tr>`).join("") : `<tr><td colspan="6"><div class="empty-state"><i data-lucide="search-x"></i><br>No members match your search.</div></td></tr>`;
+    $("#membersTable").innerHTML = filtered.length ? filtered.map(member => {
+      const classification = classificationPresentation(memberClassification(member));
+      return `<tr>
+        <td><div class="member-cell"><span class="avatar">${initials(member)}</span><div><button class="member-name-button" type="button" data-view-member="${member.id}">${esc(fullName(member))}</button><small>${esc(member.gender)}</small></div></div></td>
+        <td><span>${esc(member.phone || "—")}</span><small class="cell-subtext">${esc(member.email || "No email")}</small></td>
+        <td><div class="classification-cell ${classification.warning ? "warning" : ""}"><strong>${esc(classification.label)}</strong><small>${esc(classification.note)}</small></div></td><td>${esc(member.role)}</td>
+        <td><span class="status-pill ${member.status.toLowerCase()}">${esc(member.status)}</span></td>
+        <td>${hasPermission("members.manage") ? `<div class="row-actions"><button class="icon-btn" data-edit-member="${member.id}" aria-label="Edit ${esc(fullName(member))}"><i data-lucide="pencil"></i></button><button class="icon-btn delete" data-delete-member="${member.id}" aria-label="Delete ${esc(fullName(member))}"><i data-lucide="trash-2"></i></button></div>` : ""}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="6"><div class="empty-state"><i data-lucide="search-x"></i><br>No members match your search.</div></td></tr>`;
   }
 
   function renderFinance() {
-    const currentMonth = monthKey();
-    const periodLabel = new Date().toLocaleDateString("en-GH", { month: "long", year: "numeric" });
-    const monthTransactions = state.transactions.filter(t => t.transaction_date?.startsWith(currentMonth));
-    const income = monthTransactions.filter(t => t.type === "Income").reduce((sum, t) => sum + Number(t.amount), 0);
-    const expenses = monthTransactions.filter(t => t.type === "Expense").reduce((sum, t) => sum + Number(t.amount), 0);
-    $("#financeMetrics").innerHTML = [
-      metricCard("Total income", money.format(income), periodLabel, "trending-up", "#087a38"),
-      metricCard("Total expenses", money.format(expenses), periodLabel, "trending-down", "#d80011"),
-      metricCard("Net balance", money.format(income - expenses), "Available across funds", "landmark", "#0a3995")
-    ].join("");
-    $("#transactionsTable").innerHTML = state.transactions.length ? state.transactions.slice().sort((a, b) => b.transaction_date.localeCompare(a.transaction_date)).map(tx => `<tr><td>${shortDate.format(new Date(`${tx.transaction_date}T00:00:00`))}</td><td><span class="transaction-name">${esc(tx.description)}</span></td><td>${esc(tx.fund)}</td><td><span class="status-pill ${tx.type.toLowerCase()}">${esc(tx.type)}</span></td><td class="money ${tx.type.toLowerCase()}">${tx.type === "Expense" ? "−" : "+"}${money.format(tx.amount)}</td><td>${hasPermission("finance.manage") ? `<div class="row-actions"><button class="icon-btn delete" data-delete-transaction="${tx.id}" aria-label="Delete transaction"><i data-lucide="trash-2"></i></button></div>` : ""}</td></tr>`).join("") : `<tr><td colspan="6"><div class="empty-state"><i data-lucide="receipt-text"></i><p>No transactions recorded.</p></div></td></tr>`;
-    const fundMap = state.transactions.reduce((map, tx) => {
-      map[tx.fund] = (map[tx.fund] || 0) + (tx.type === "Expense" ? -Number(tx.amount) : Number(tx.amount));
-      return map;
-    }, {});
-    const funds = Object.entries(fundMap).sort((a, b) => b[1] - a[1]);
-    const maxFund = Math.max(...funds.map(([, value]) => Math.abs(value)), 1);
-    $("#fundBalances").innerHTML = funds.length ? funds.map(([name, value]) => `<div class="fund-item"><div><span>${esc(name)}</span><strong>${money.format(value)}</strong></div><progress value="${Math.round(Math.abs(value) / maxFund * 100)}" max="100"></progress></div>`).join("") : `<div class="empty-state compact"><i data-lucide="wallet"></i><p>No fund balances yet.</p></div>`;
+    window.FinanceModule?.syncReferenceData(state.members, state.events);
+    window.FinanceModule?.render();
   }
 
   function renderEvents() {
@@ -298,7 +343,15 @@
     $("#growthChart").innerHTML = monthSeries.some(item => item.count) ? monthSeries.map(item => `<span class="line-bar" style="height:${Math.max(8, Math.round(item.count / maxGrowth * 100))}%" title="${item.count} members"></span>`).join("") : `<div class="empty-state compact"><i data-lucide="chart-no-axes-column"></i><p>No membership growth data yet.</p></div>`;
     $("#growthAxis").innerHTML = monthSeries.map(item => `<span>${item.label}</span>`).join("");
     const female = state.members.filter(m => m.gender === "Female").length;
-    const profiles = [["Female", female, "#d80011"], ["Male", state.members.length - female, "#0a3995"], ["Active", active, "#087a38"]];
+    const male = state.members.filter(m => m.gender === "Male").length;
+    const generationColors = ["#6b4eff", "#175cd3", "#087a38", "#b54708", "#c11574", "#475467"];
+    const configuredGroups = window.GenerationalGroups?.getGroups().filter(group => group.status === "Active") || [];
+    const groupProfiles = configuredGroups.map((group, index) => [
+      group.name,
+      state.members.filter(member => memberClassification(member).group?.id === group.id).length,
+      generationColors[index % generationColors.length]
+    ]);
+    const profiles = [["Female", female, "#d80011"], ["Male", male, "#0a3995"], ["Active", active, "#087a38"], ...groupProfiles];
     $("#demographics").innerHTML = profiles.map(([label, n, color]) => { const pct = Math.round(n / Math.max(state.members.length, 1) * 100); return `<div class="demo-row"><div><span>${label}</span><strong>${n} · ${pct}%</strong></div><div class="demo-track"><i style="width:${pct}%;--bar-color:${color}"></i></div></div>`; }).join("");
   }
 
@@ -313,6 +366,7 @@
   }
 
   function renderAll() {
+    window.AttendanceModule?.syncReferenceData(state.members, state.events);
     renderDashboard();
     renderMembers();
     renderFinance();
@@ -331,13 +385,36 @@
   function memberFields(member = {}) {
     return `<label>First name<input name="first_name" required value="${esc(member.first_name)}" placeholder="e.g. Ama" /></label>
       <label>Last name<input name="last_name" required value="${esc(member.last_name)}" placeholder="e.g. Mensah" /></label>
+      <label>Date of birth<input name="date_of_birth" required type="date" max="${todayIso()}" value="${esc(member.date_of_birth)}" /><small class="field-note">Age is calculated automatically and is not stored.</small></label>
       <label>Gender<select name="gender" required>${options(["Female", "Male"], member.gender)}</select></label>
       <label>Phone (optional)<input name="phone" type="tel" value="${esc(member.phone)}" placeholder="024 000 0000" /></label>
       <label class="full">Email address<input name="email" type="email" value="${esc(member.email)}" placeholder="member@example.com" /></label>
-      <label>Group / ministry<select name="group_name">${options(["Children Service", "Junior Youth (JY)", "Young People's Guild (YPG)", "Young Adult Fellowship (YAF)", "Women's Fellowship", "Men's Fellowship"], member.group_name)}</select></label>
+      <label class="full">Actual fellowship / department (optional)<input name="group_name" value="${esc(member.group_name)}" placeholder="e.g. Choir or welfare team" /><small class="field-note">This records actual participation and is separate from the automatic age-based group.</small></label>
       <label>Role<select name="role">${options(["Member", "Leader", "Elder", "Deacon", "Teacher"], member.role || "Member")}</select></label>
       <label>Status<select name="status">${options(["Active", "Visitor", "Inactive"], member.status || "Active")}</select></label>
       <label>Date joined<input name="joined_at" type="date" value="${esc(member.joined_at || todayIso())}" /></label>`;
+  }
+
+  function openMemberProfile(member) {
+    if (!member) return;
+    state.viewingMemberId = member.id;
+    const classification = memberClassification(member);
+    const presentation = classificationPresentation(classification);
+    $("#memberProfileAvatar").textContent = initials(member) || "MB";
+    $("#memberProfileName").textContent = fullName(member) || "Unnamed member";
+    $("#memberProfileMeta").textContent = `${member.role || "Member"} · ${member.status || "Unknown status"}`;
+    $("#memberProfileBody").innerHTML = `<div class="member-profile-grid">
+      <div class="member-profile-field"><span>Date of birth</span><strong>${esc(formatMemberDate(member.date_of_birth))}</strong></div>
+      <div class="member-profile-field"><span>Current age</span><strong>${classification.age === null ? "Not available" : `${classification.age} years`}</strong></div>
+      <div class="member-profile-field"><span>Gender</span><strong>${esc(member.gender || "Not specified")}</strong></div>
+      <div class="member-profile-field"><span>Date joined</span><strong>${esc(formatMemberDate(member.joined_at))}</strong></div>
+      <div class="member-profile-field classification"><span>Age-based group</span><strong>${esc(presentation.label)}</strong><small><i data-lucide="sparkles"></i>Automatically determined from date of birth and the church's active rules</small></div>
+      <div class="member-profile-field"><span>Actual fellowship / department</span><strong>${esc(member.group_name || "None recorded")}</strong></div>
+      <div class="member-profile-field"><span>Contact</span><strong>${esc(member.phone || member.email || "None recorded")}</strong></div>
+    </div>`;
+    $("#editMemberFromProfile").hidden = !hasPermission("members.manage");
+    $("#memberProfileDialog").showModal();
+    refreshIcons();
   }
 
   function transactionFields() {
@@ -385,11 +462,15 @@
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
     try {
       if (state.dialogType === "member") {
+        const ageResult = window.GenerationalGroups.calculateAge(values.date_of_birth);
+        if (ageResult.code === "missing-date") throw new Error("Date of birth is required.");
+        if (ageResult.code === "invalid-date") throw new Error("Enter a valid date of birth.");
+        if (ageResult.code === "future-date") throw new Error("Date of birth cannot be in the future.");
         if (state.editingId) {
           const record = { ...values, id: state.editingId };
           await persistUpdate("members", record);
           const i = state.members.findIndex(item => item.id === state.editingId);
-          state.members[i] = record;
+          state.members[i] = { ...state.members[i], ...record };
           toast("Member details updated.");
         } else {
           const record = { ...values, id: uid(), created_at: new Date().toISOString() };
@@ -539,10 +620,45 @@
       state.transactions = [];
       state.events = [];
       state.attendance_records = [];
+      state.member_attendance_records = [];
       liveTables.forEach(([table], index) => { state[table] = results[index].data || []; });
       state.dataMode = "supabase";
       applyPermissions();
       updateConnectionUI();
+      if (!state.generationalGroupsInitialized && window.GenerationalGroups) {
+        await window.GenerationalGroups.initialize({
+          client,
+          permissions: state.permissions,
+          onChange: () => renderAll()
+        });
+        state.generationalGroupsInitialized = true;
+      }
+      if (!state.attendanceInitialized && window.AttendanceModule) {
+        await window.AttendanceModule.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions,
+          members: state.members,
+          events: state.events,
+          onChange: records => {
+            state.member_attendance_records = records;
+            renderDashboard();
+            refreshIcons();
+          }
+        });
+        state.attendanceInitialized = true;
+      }
+      if (!state.financeInitialized && window.FinanceModule) {
+        await window.FinanceModule.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions,
+          members: state.members,
+          events: state.events,
+          legacyTransactions: state.transactions
+        });
+        state.financeInitialized = true;
+      }
       renderAll();
       if (!state.userManagementInitialized && window.UserManagement) {
         window.UserManagement.initialize({ client, userId: state.user.id, permissions: state.permissions });
@@ -609,9 +725,18 @@
       if (pageTarget) navigate(pageTarget.dataset.page);
       const action = event.target.closest("[data-action]")?.dataset.action;
       if (action === "add-member") openDialog("member");
-      if (action === "add-transaction") openDialog("transaction");
+      if (action === "add-transaction") {
+        navigate("finance");
+        window.FinanceModule?.openCollection();
+      }
       if (action === "add-event") openDialog("event");
-      if (action === "add-attendance") openDialog("attendance");
+      if (action === "add-attendance") {
+        navigate("attendance");
+        window.AttendanceModule?.openTakeAttendance();
+      }
+      if (action === "add-attendance-summary") openDialog("attendance");
+      const viewId = event.target.closest("[data-view-member]")?.dataset.viewMember;
+      if (viewId) openMemberProfile(state.members.find(member => member.id === viewId));
       const editId = event.target.closest("[data-edit-member]")?.dataset.editMember;
       if (editId) openDialog("member", state.members.find(member => member.id === editId));
       const memberId = event.target.closest("[data-delete-member]")?.dataset.deleteMember;
@@ -624,9 +749,27 @@
     $("#eventTypeFilter").addEventListener("change", () => { renderEvents(); refreshIcons(); });
     $("#entryForm").addEventListener("submit", saveRecord);
     $$('[data-close-dialog]').forEach(btn => btn.addEventListener("click", () => $("#entryDialog").close()));
-    $("#quickAddBtn").addEventListener("click", () => openDialog(state.page === "finance" ? "transaction" : state.page === "events" ? "event" : "member"));
-    $("#exportMembers").addEventListener("click", () => exportCsv("resurrection-members.csv", state.members));
-    $("#exportFinance").addEventListener("click", () => exportCsv("resurrection-transactions.csv", state.transactions));
+    $$('[data-close-member-profile]').forEach(btn => btn.addEventListener("click", () => $("#memberProfileDialog").close()));
+    $("#editMemberFromProfile").addEventListener("click", () => {
+      const member = state.members.find(item => item.id === state.viewingMemberId);
+      $("#memberProfileDialog").close();
+      if (member) openDialog("member", member);
+    });
+    $("#quickAddBtn").addEventListener("click", () => {
+      if (state.page === "attendance") return window.AttendanceModule?.openTakeAttendance();
+      if (state.page === "finance") return window.FinanceModule?.openCollection();
+      openDialog(state.page === "finance" ? "transaction" : state.page === "events" ? "event" : "member");
+    });
+    $("#exportMembers").addEventListener("click", () => exportCsv("resurrection-members.csv", state.members.map(member => {
+      const classification = memberClassification(member);
+      return {
+        ...member,
+        current_age: classification.age ?? "",
+        age_based_group: classification.group?.name || classificationPresentation(classification).label,
+        actual_fellowship_or_department: member.group_name || ""
+      };
+    })));
+    $("#exportFinance")?.addEventListener("click", () => exportCsv("resurrection-transactions.csv", state.transactions));
     $("#printReport").addEventListener("click", () => window.print());
     $("#supportBtn").addEventListener("click", () => toast("Support: contact your church system administrator."));
     $("#notificationBtn").addEventListener("click", event => { event.stopPropagation(); window.ProfileController?.close(); $("#notificationPanel").hidden = !$("#notificationPanel").hidden; });
@@ -661,6 +804,12 @@
     const greeting = now.getHours() < 12 ? "Good morning" : now.getHours() < 18 ? "Good afternoon" : "Good evening";
     const firstName = getAdminProfile().name.split(/\s+/)[0];
     $("#page-dashboard h2").textContent = `${greeting}, ${firstName}.`;
+    window.setInterval(() => {
+      const currentDate = todayIso();
+      if (currentDate === lastClassificationDate) return;
+      lastClassificationDate = currentDate;
+      renderAll();
+    }, 60000);
     const requestedPage = location.hash.slice(1) || "dashboard";
     navigate($("#page-" + requestedPage) ? requestedPage : "dashboard", false);
     $("#appLoading").classList.add("ready");

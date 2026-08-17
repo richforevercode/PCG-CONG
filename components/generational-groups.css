@@ -1,0 +1,335 @@
+.generational-settings-card {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.generational-settings-card .card-heading {
+  align-items: flex-start;
+}
+
+.group-rules-intro {
+  max-width: 720px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.generational-rules-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 24px;
+  border-bottom: 1px solid var(--line);
+  background: #fafbfc;
+}
+
+.generational-rules-toolbar span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.generational-groups-table {
+  width: 100%;
+}
+
+.generational-groups-table th:first-child,
+.generational-groups-table td:first-child {
+  width: 42%;
+}
+
+.generational-groups-table th:last-child,
+.generational-groups-table td:last-child {
+  width: 84px;
+  text-align: right;
+}
+
+.group-rule-name {
+  display: grid;
+  gap: 4px;
+}
+
+.group-rule-name strong {
+  color: var(--ink);
+}
+
+.group-rule-name small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.group-rule-guidance {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 16px 24px;
+  color: #344054;
+  background: #f4f7fc;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.group-rule-guidance svg {
+  flex: 0 0 auto;
+  width: 17px;
+  color: var(--blue-800);
+}
+
+.group-form-error {
+  display: flex;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 11px 12px;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.field-note {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.member-name-button {
+  display: inline;
+  padding: 0;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.member-name-button:hover,
+.member-name-button:focus-visible {
+  color: var(--blue-800);
+  text-decoration: underline;
+}
+
+.classification-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 170px;
+}
+
+.classification-cell strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.classification-cell small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.classification-cell.warning strong {
+  color: #b54708;
+}
+
+.generational-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: -8px 0 20px;
+}
+
+.generational-summary-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 15px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 3px 12px rgba(16, 24, 40, .035);
+}
+
+.generational-summary-item strong {
+  color: var(--ink);
+  font: 700 22px/1 "Source Serif 4", serif;
+}
+
+.generational-summary-item span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.generational-summary-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 13px 15px;
+  color: var(--muted);
+  background: #fff;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.member-profile-dialog {
+  width: min(680px, calc(100vw - 28px));
+}
+
+.member-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.member-profile-avatar {
+  display: grid;
+  width: 50px;
+  height: 50px;
+  place-items: center;
+  color: var(--blue-800);
+  background: #eaf0fb;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.member-profile-identity h3 {
+  margin-bottom: 4px;
+}
+
+.member-profile-identity p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.member-profile-body {
+  display: block;
+}
+
+.member-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.member-profile-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 16px;
+  background: #fff;
+}
+
+.member-profile-field span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.member-profile-field strong {
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.member-profile-field.classification {
+  grid-column: 1 / -1;
+  padding: 19px;
+  background: #f4f7fc;
+}
+
+.member-profile-field.classification strong {
+  color: var(--blue-800);
+  font: 700 22px/1.2 "Source Serif 4", serif;
+}
+
+.member-profile-field.classification small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.member-profile-field.classification small svg {
+  width: 14px;
+}
+
+@media (max-width: 700px) {
+  .generational-rules-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .generational-rules-toolbar .primary-btn {
+    justify-content: center;
+  }
+
+  .generational-groups-table thead {
+    display: none;
+  }
+
+  .generational-groups-table,
+  .generational-groups-table tbody,
+  .generational-groups-table tr,
+  .generational-groups-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .generational-groups-table tr {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .generational-groups-table td,
+  .generational-groups-table td:first-child,
+  .generational-groups-table td:last-child {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    align-items: start;
+    width: 100%;
+    padding: 7px 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .generational-groups-table td::before {
+    color: var(--muted);
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .generational-groups-table td:last-child .row-actions {
+    justify-content: flex-start;
+  }
+
+  .member-profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .member-profile-field.classification {
+    grid-column: auto;
+  }
+}

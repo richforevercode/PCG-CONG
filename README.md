@@ -27,8 +27,12 @@ The included Row Level Security policies check each active user's assigned role 
 
 - Responsive dashboard with attendance, giving, activity, and programme summaries
 - Live service-attendance recording with seven-service participation trends
+- Member-level Present, Absent, and Excused attendance with service reports and increase/decrease trend charts
 - Searchable member directory with add, edit, delete, filter, and CSV export
-- Income and expense ledger with fund allocations and CSV export
+- Configurable age- and gender-based generational groups with automatic member classification
+- Database-backed Presbyterian finance module with collections, tithes, VTO, children's and JY offertory, Adult Offertory, expenses, funds, reports, and audit history
+- Configurable Adult Offertory distribution with historical calculation snapshots and concurrency-safe Sebrepor District remittance tracking
+- Daily, weekly, monthly, quarterly, yearly, collection-type, and comparable-period financial growth analytics
 - Event calendar and programme scheduling
 - Printable membership and stewardship reports
 - Dedicated responsive sign-in screen and authenticated route guard
@@ -47,6 +51,9 @@ The included Row Level Security policies check each active user's assigned role 
 - `components/profile.css` — responsive profile trigger and account menu
 - `components/signin.js` and `components/signin.css` — secure sign-in experience
 - `components/user-management.js` and `components/user-management.css` — users, roles, and permissions UI
+- `components/generational-groups.js` and `components/generational-groups.css` — rule administration, age calculation, and classification UI
+- `components/attendance.js` and `components/attendance.css` — attendance register, records, filters, reports, and trend visualizations
+- `components/finance.js` and `components/finance.css` — finance dashboard, collection workflows, growth chart, expenses, funds, remittances, reports, settings, and audit UI
 - `app.js` — application behavior and data integration
 - `config.js` — public Supabase configuration
 - `supabase-schema.sql` — foundation tables for reference

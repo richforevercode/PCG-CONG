@@ -15,8 +15,12 @@
       ["attendance.manage", "Manage attendance", "Record and update service attendance."]
     ]},
     { name: "Finance", items: [
-      ["finance.view", "View finance", "Read transactions, balances, and giving reports."],
-      ["finance.manage", "Manage finance", "Create and remove financial transactions."]
+      ["finance.view", "View finance", "Read collections, balances, expenses, and reports."],
+      ["finance.manage", "Manage finance", "Record, update, remit, and void financial records."],
+      ["finance.verify", "Verify collections", "Verify and reconcile counted church collections."],
+      ["finance.approve", "Approve expenses", "Approve expenses and mark approved expenses as paid."],
+      ["finance.settings", "Manage finance settings", "Configure funds and distribution rules."],
+      ["finance.audit", "View finance audit trail", "Read immutable financial accountability history."]
     ]},
     { name: "Administration", items: [
       ["settings.manage", "Manage settings", "Update congregation and connection settings."],

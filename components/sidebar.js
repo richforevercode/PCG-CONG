@@ -23,7 +23,25 @@
       <nav class="side-nav" id="sideNav" aria-label="Church management">
         <button class="nav-item active" data-page="dashboard" data-requires="dashboard.view"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
         <button class="nav-item" data-page="members" data-requires="members.view"><i data-lucide="users"></i><span>Membership</span><b id="memberNavCount">0</b></button>
-        <button class="nav-item" data-page="finance" data-requires="finance.view"><i data-lucide="wallet-cards"></i><span>Finance</span></button>
+        <button class="nav-item" data-page="attendance" data-requires="attendance.view"><i data-lucide="clipboard-check"></i><span>Attendance</span></button>
+        <div class="finance-nav-group" data-requires="finance.view">
+          <button class="nav-item" data-page="finance" data-finance-section="dashboard"><i data-lucide="wallet-cards"></i><span>Finance</span></button>
+          <div class="finance-subnav" aria-label="Finance navigation">
+            <button data-page="finance" data-finance-section="dashboard">Finance Dashboard</button>
+            <button data-page="finance" data-finance-section="collections">Collections</button>
+            <button data-page="finance" data-finance-section="tithes">Tithes</button>
+            <button data-page="finance" data-finance-section="vto">Vote of Thanks (VTO)</button>
+            <button data-page="finance" data-finance-section="children">Children's Service Offertory</button>
+            <button data-page="finance" data-finance-section="jy">Junior Youth (JY)</button>
+            <button data-page="finance" data-finance-section="adult">Adult Offertory</button>
+            <button data-page="finance" data-finance-section="remittances">District Remittance</button>
+            <button data-page="finance" data-finance-section="expenses">Expenses</button>
+            <button data-page="finance" data-finance-section="funds">Funds / Accounts</button>
+            <button data-page="finance" data-finance-section="reports">Financial Reports</button>
+            <button data-page="finance" data-finance-section="settings">Finance Settings</button>
+            <button data-page="finance" data-finance-section="audit">Audit Trail</button>
+          </div>
+        </div>
         <button class="nav-item" data-page="events" data-requires="events.view"><i data-lucide="calendar-days"></i><span>Events</span></button>
         <button class="nav-item" data-page="reports" data-requires="reports.view"><i data-lucide="chart-no-axes-combined"></i><span>Reports</span></button>
         <button class="nav-item" data-page="users" data-requires="users.manage"><i data-lucide="shield-user"></i><span>Users & roles</span></button>

@@ -17,6 +17,9 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="components/sidebar.css" />
   <link rel="stylesheet" href="components/dashboard.css" />
+  <link rel="stylesheet" href="components/generational-groups.css" />
+  <link rel="stylesheet" href="components/attendance.css" />
+  <link rel="stylesheet" href="components/finance.css" />
   <link rel="stylesheet" href="components/profile.css" />
   <link rel="stylesheet" href="components/user-management.css" />
 </head>
@@ -32,8 +35,8 @@
 
     <div class="app-main">
       <header class="topbar">
-        <button class="icon-btn mobile-menu" id="menuBtn" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><i
-            data-lucide="menu"></i></button>
+        <button class="icon-btn mobile-menu" id="menuBtn" aria-label="Open navigation" aria-controls="sidebar"
+          aria-expanded="false"><i data-lucide="menu"></i></button>
         <label class="global-search" for="globalSearch">
           <i data-lucide="search"></i>
           <input id="globalSearch" type="search" placeholder="Search members, events, transactions..."
@@ -57,8 +60,10 @@
               <p>Your congregation overview, updated from live church records.</p>
             </div>
             <div class="dashboard-actions">
-              <button class="secondary-btn" data-action="add-attendance" data-requires="attendance.manage"><i data-lucide="clipboard-check"></i> Record attendance</button>
-              <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i data-lucide="user-plus"></i> Add member</button>
+              <button class="secondary-btn" data-action="add-attendance" data-requires="attendance.manage"><i
+                  data-lucide="clipboard-check"></i> Record attendance</button>
+              <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i
+                  data-lucide="user-plus"></i> Add member</button>
             </div>
           </div>
 
@@ -71,9 +76,10 @@
                   <p class="eyebrow">SERVICE PARTICIPATION</p>
                   <h3>Attendance trend</h3>
                 </div>
-                <button class="text-btn" data-action="add-attendance">Record service <i data-lucide="plus"></i></button>
+                <button class="text-btn" data-action="add-attendance-summary" data-requires="attendance.manage">Record service totals <i data-lucide="plus"></i></button>
               </div>
-              <div class="attendance-summary"><strong id="lastAttendance">—</strong><span id="attendanceNote">No attendance records yet</span></div>
+              <div class="attendance-summary"><strong id="lastAttendance">—</strong><span id="attendanceNote">No
+                  attendance records yet</span></div>
               <div class="bar-chart" id="attendanceChart" aria-label="Attendance for the latest services"></div>
               <div class="chart-axis" id="attendanceAxis"></div>
             </article>
@@ -93,7 +99,8 @@
                 <div>
                   <p class="eyebrow">MEMBERSHIP HEALTH</p>
                   <h3>Congregation profile</h3>
-                </div><button class="text-btn" data-page="members">Directory <i data-lucide="arrow-up-right"></i></button>
+                </div><button class="text-btn" data-page="members">Directory <i
+                    data-lucide="arrow-up-right"></i></button>
               </div>
               <div id="membershipHealth" class="membership-health"></div>
             </article>
@@ -107,7 +114,8 @@
               </div>
               <div class="cashflow-summary" id="cashflowSummary"></div>
               <div class="cashflow-visual" id="cashflowVisual"></div>
-              <div class="giving-meta"><span>Transactions this month</span><strong id="givingTransactionCount">0</strong></div>
+              <div class="giving-meta"><span>Transactions this month</span><strong
+                  id="givingTransactionCount">0</strong></div>
             </article>
 
             <article class="card dashboard-panel dashboard-activity">
@@ -129,9 +137,11 @@
               <h2>Membership directory</h2>
               <p>Manage member records, groups, and pastoral care details.</p>
             </div>
-            <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i data-lucide="user-plus"></i> Add new member</button>
+            <button class="primary-btn" data-action="add-member" data-requires="members.manage"><i
+                data-lucide="user-plus"></i> Add new member</button>
           </div>
           <div class="summary-strip" id="memberSummary"></div>
+          <div class="generational-summary" id="memberGenerationalSummary" aria-label="Current age-based membership groups" aria-live="polite"></div>
           <article class="card table-card">
             <div class="table-toolbar">
               <label class="inline-search"><i data-lucide="search"></i><input id="memberSearch" type="search"
@@ -152,7 +162,7 @@
                   <tr>
                     <th>Member</th>
                     <th>Contact</th>
-                    <th>Group</th>
+                    <th>Age-based group</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th></th>
@@ -168,51 +178,71 @@
           </article>
         </section>
 
-        <section class="page" id="page-finance" data-page-title="Finance">
+        <section class="page" id="page-attendance" data-page-title="Attendance">
           <div class="page-heading">
             <div>
-              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Finance</p>
-              <h2>Finance & stewardship</h2>
-              <p>Track giving, expenses, funds, and church financial health.</p>
+              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Attendance</p>
+              <h2>Attendance</h2>
+              <p>Track and manage church attendance.</p>
             </div>
-            <button class="primary-btn" data-action="add-transaction" data-requires="finance.manage"><i data-lucide="plus"></i> Record
-              transaction</button>
+            <button class="primary-btn" id="takeAttendanceBtn" type="button" data-requires="attendance.manage"><i data-lucide="plus"></i> Take Attendance</button>
           </div>
-          <div class="metric-grid finance-metrics" id="financeMetrics"></div>
-          <div class="content-grid-wide">
-            <article class="card table-card">
-              <div class="card-heading table-heading">
-                <div>
-                  <p class="eyebrow">LEDGER</p>
-                  <h3>Recent transactions</h3>
-                </div><button class="secondary-btn" id="exportFinance"><i data-lucide="download"></i> Export</button>
-              </div>
-              <div class="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Fund</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="transactionsTable"></tbody>
-                </table>
-              </div>
-            </article>
-            <article class="card fund-card">
+
+          <div class="metric-grid attendance-metrics-grid" id="attendanceMetrics"></div>
+
+          <div class="attendance-insights-grid">
+            <article class="card attendance-trend-card">
               <div class="card-heading">
                 <div>
-                  <p class="eyebrow">ALLOCATION</p>
-                  <h3>Fund balances</h3>
+                  <p class="eyebrow">ATTENDANCE TREND</p>
+                  <h3>Increase and decrease by service</h3>
+                </div>
+                <span class="attendance-trend-change neutral" id="attendanceTrendChange"><i data-lucide="minus"></i> No comparison</span>
+              </div>
+              <div id="attendanceTrendChart" class="attendance-trend-chart" aria-live="polite"></div>
+              <p class="attendance-chart-caption">Present members per service. Segment colors show movement from the previous service.</p>
+              <div class="attendance-chart-legend" aria-label="Chart legend">
+                <span><i class="increase"></i> Increase</span>
+                <span><i class="decrease"></i> Decrease</span>
+                <span><i class="unchanged"></i> Unchanged</span>
+              </div>
+            </article>
+
+            <article class="card attendance-session-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">SERVICE SUMMARY</p>
+                  <h3>Recent attendance</h3>
                 </div>
               </div>
-              <div id="fundBalances"></div>
+              <div id="attendanceSessionSummary"></div>
             </article>
           </div>
+
+          <article class="card table-card attendance-records-card">
+            <div class="table-toolbar attendance-toolbar">
+              <label class="inline-search"><i data-lucide="search"></i><input id="attendanceSearch" type="search" placeholder="Search members or recorders..." /></label>
+              <div class="toolbar-actions attendance-filters">
+                <input id="attendanceDateFilter" type="date" aria-label="Filter attendance by date" />
+                <select id="attendanceEventFilter" aria-label="Filter attendance by service or event"><option value="all">All services/events</option></select>
+                <select id="attendanceStatusFilter" aria-label="Filter attendance by status"><option value="all">All statuses</option><option>Present</option><option>Absent</option><option>Excused</option></select>
+                <button class="secondary-btn" id="clearAttendanceFilters" type="button"><i data-lucide="list-filter"></i> Clear</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="attendance-records-table">
+                <thead><tr><th>Member</th><th>Date</th><th>Service/Event</th><th>Status</th><th>Recorded by</th><th>Time recorded</th><th></th></tr></thead>
+                <tbody id="attendanceRecordsTable"></tbody>
+              </table>
+            </div>
+            <div class="table-footer"><span id="attendanceTableCount">No attendance records</span>
+              <div class="pagination"><button id="attendancePreviousPage" type="button" aria-label="Previous attendance page"><i data-lucide="chevron-left"></i></button><button class="active" id="attendancePageNumber" type="button" aria-current="page">1</button><button id="attendanceNextPage" type="button" aria-label="Next attendance page"><i data-lucide="chevron-right"></i></button></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="page" id="page-finance" data-page-title="Finance">
+          <div id="financeModuleRoot"></div>
         </section>
 
         <section class="page" id="page-events" data-page-title="Events">
@@ -222,12 +252,15 @@
               <h2>Events & programmes</h2>
               <p>Plan services, meetings, outreach, and fellowship activities.</p>
             </div>
-            <button class="primary-btn" data-action="add-event" data-requires="events.manage"><i data-lucide="calendar-plus"></i> Create
+            <button class="primary-btn" data-action="add-event" data-requires="events.manage"><i
+                data-lucide="calendar-plus"></i> Create
               event</button>
           </div>
           <div class="event-layout">
             <article class="card mini-calendar">
-              <div class="calendar-title"><span></span><h3 id="calendarTitle"></h3><span></span></div>
+              <div class="calendar-title"><span></span>
+                <h3 id="calendarTitle"></h3><span></span>
+              </div>
               <div class="calendar-week">
                 <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
               </div>
@@ -281,6 +314,15 @@
               </div>
               <div id="demographics" class="demographics"></div>
             </article>
+            <article class="card attendance-report-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">ATTENDANCE</p>
+                  <h3>Attendance by service</h3>
+                </div>
+              </div>
+              <div id="attendanceReportSummary"></div>
+            </article>
           </div>
         </section>
 
@@ -291,7 +333,8 @@
               <h2>Users & roles</h2>
               <p>Create administrator accounts and control what each role can access.</p>
             </div>
-            <button class="primary-btn" id="addUserBtn" data-requires="users.manage"><i data-lucide="user-plus"></i> Add administrator</button>
+            <button class="primary-btn" id="addUserBtn" data-requires="users.manage"><i data-lucide="user-plus"></i> Add
+              administrator</button>
           </div>
 
           <div class="user-metrics" id="userMetrics"></div>
@@ -299,15 +342,30 @@
           <div class="user-management-layout">
             <article class="card table-card users-card">
               <div class="table-toolbar">
-                <label class="inline-search"><i data-lucide="search"></i><input id="userSearch" type="search" placeholder="Search administrators..." /></label>
+                <label class="inline-search"><i data-lucide="search"></i><input id="userSearch" type="search"
+                    placeholder="Search administrators..." /></label>
                 <div class="toolbar-actions">
-                  <select id="userRoleFilter" aria-label="Filter users by role"><option value="all">All roles</option></select>
-                  <select id="userStatusFilter" aria-label="Filter users by status"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select>
+                  <select id="userRoleFilter" aria-label="Filter users by role">
+                    <option value="all">All roles</option>
+                  </select>
+                  <select id="userStatusFilter" aria-label="Filter users by status">
+                    <option value="all">All statuses</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
                 </div>
               </div>
               <div class="table-scroll">
                 <table>
-                  <thead><tr><th>Administrator</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Administrator</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Added</th>
+                      <th></th>
+                    </tr>
+                  </thead>
                   <tbody id="usersTable"></tbody>
                 </table>
               </div>
@@ -316,8 +374,12 @@
 
             <aside class="card roles-card">
               <div class="roles-heading">
-                <div><p class="eyebrow">ACCESS CONTROL</p><h3>Roles</h3></div>
-                <button class="icon-btn" id="addRoleBtn" data-requires="roles.manage" aria-label="Create role"><i data-lucide="plus"></i></button>
+                <div>
+                  <p class="eyebrow">ACCESS CONTROL</p>
+                  <h3>Roles</h3>
+                </div>
+                <button class="icon-btn" id="addRoleBtn" data-requires="roles.manage" aria-label="Create role"><i
+                    data-lucide="plus"></i></button>
               </div>
               <p class="roles-intro">Roles group permissions so access stays consistent as your team changes.</p>
               <div class="roles-list" id="rolesList"></div>
@@ -330,7 +392,7 @@
             <div>
               <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Settings</p>
               <h2>System settings</h2>
-              <p>Manage congregation information and administrator access.</p>
+              <p>Manage congregation information, membership rules, and administrator access.</p>
             </div>
           </div>
           <div class="settings-grid">
@@ -361,24 +423,62 @@
                 </div>
               </div>
               <form id="authForm" class="auth-form">
-                <div class="auth-heading"><strong>Administrator account</strong><span id="authHint">Checking account...</span></div>
-                <div class="signed-in-account" id="signedInAccount" hidden><span class="signed-in-avatar" id="settingsAvatar">CA</span><div><strong id="signedInName">Church Admin</strong><span id="signedInEmail"></span></div><i data-lucide="badge-check"></i></div>
-                <div class="auth-credentials" id="authCredentials"><label>Email<input name="email" type="email" autocomplete="username"
-                    placeholder="admin@example.org" /></label><label>Password<input name="password" type="password"
-                    autocomplete="current-password" placeholder="••••••••" /></label></div>
+                <div class="auth-heading"><strong>Administrator account</strong><span id="authHint">Checking
+                    account...</span></div>
+                <div class="signed-in-account" id="signedInAccount" hidden><span class="signed-in-avatar"
+                    id="settingsAvatar">CA</span>
+                  <div><strong id="signedInName">Church Admin</strong><span id="signedInEmail"></span></div><i
+                    data-lucide="badge-check"></i>
+                </div>
+                <div class="auth-credentials" id="authCredentials"><label>Email<input name="email" type="email"
+                      autocomplete="username" placeholder="admin@example.org" /></label><label>Password<input
+                      name="password" type="password" autocomplete="current-password" placeholder="••••••••" /></label>
+                </div>
                 <div class="form-actions"><button class="secondary-btn" type="button" id="signOutBtn" hidden>Sign
                     out</button><button class="primary-btn" type="submit" id="signInBtn">Sign in</button></div>
               </form>
               <details class="advanced-settings">
-                <summary><span><i data-lucide="square-terminal"></i><strong>Developer connection settings</strong></span><i data-lucide="chevron-down"></i></summary>
-                <div class="advanced-settings-body"><p>Only change these values when moving the system to another database project.</p>
+                <summary><span><i data-lucide="square-terminal"></i><strong>Developer connection
+                      settings</strong></span><i data-lucide="chevron-down"></i></summary>
+                <div class="advanced-settings-body">
+                  <p>Only change these values when moving the system to another database project.</p>
                   <form id="supabaseForm"><label>Project URL<input name="url" type="url"
                         placeholder="https://your-project.supabase.co" /></label><label>Publishable key<input name="key"
                         type="password" placeholder="sb_publishable_..." /></label>
-                    <div class="form-actions"><button class="secondary-btn" type="button" id="testConnection">Test connection</button><button class="primary-btn" type="submit">Save</button></div>
-                  </form><p class="config-help">Deployment defaults are stored in <code>config.js</code>.</p>
+                    <div class="form-actions"><button class="secondary-btn" type="button" id="testConnection">Test
+                        connection</button><button class="primary-btn" type="submit">Save</button></div>
+                  </form>
+                  <p class="config-help">Deployment defaults are stored in <code>config.js</code>.</p>
                 </div>
               </details>
+            </article>
+            <article class="card settings-card generational-settings-card">
+              <div class="card-heading">
+                <div>
+                  <p class="eyebrow">MEMBERSHIP</p>
+                  <h3>Generational groups</h3>
+                  <p class="group-rules-intro">Define the inclusive age and gender rules used to classify members automatically. These rules do not change actual fellowship or department participation.</p>
+                </div>
+              </div>
+              <div class="generational-rules-toolbar">
+                <span id="generationalGroupsCount">Loading group rules…</span>
+                <button class="primary-btn" id="addGenerationalGroupBtn" type="button" data-requires="settings.manage"><i data-lucide="plus"></i> Add group</button>
+              </div>
+              <div class="table-scroll">
+                <table class="generational-groups-table">
+                  <thead>
+                    <tr>
+                      <th>Group</th>
+                      <th>Age range</th>
+                      <th>Gender</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="generationalGroupsTable"></tbody>
+                </table>
+              </div>
+              <p class="group-rule-guidance"><i data-lucide="info"></i><span>Age ranges include both boundary ages. Active rules may overlap only when one applies exclusively to males and the other exclusively to females.</span></p>
             </article>
           </div>
         </section>
@@ -410,52 +510,164 @@
     </form>
   </dialog>
 
+  <dialog id="memberProfileDialog" class="member-profile-dialog" aria-labelledby="memberProfileName">
+    <div class="dialog-header">
+      <div class="member-profile-identity">
+        <span class="member-profile-avatar" id="memberProfileAvatar">MB</span>
+        <div>
+          <p class="eyebrow">MEMBER PROFILE</p>
+          <h3 id="memberProfileName">Member</h3>
+          <p id="memberProfileMeta"></p>
+        </div>
+      </div>
+      <button class="icon-btn" type="button" data-close-member-profile aria-label="Close member profile"><i data-lucide="x"></i></button>
+    </div>
+    <div class="dialog-body member-profile-body" id="memberProfileBody"></div>
+    <div class="dialog-footer">
+      <button class="secondary-btn" type="button" data-close-member-profile>Close</button>
+      <button class="primary-btn" id="editMemberFromProfile" type="button" data-requires="members.manage"><i data-lucide="pencil"></i> Edit member</button>
+    </div>
+  </dialog>
+
+  <dialog id="takeAttendanceDialog" class="take-attendance-dialog" aria-labelledby="takeAttendanceDialogTitle">
+    <form id="takeAttendanceForm">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">ATTENDANCE REGISTER</p>
+          <h3 id="takeAttendanceDialogTitle">Take attendance</h3>
+        </div>
+        <button class="icon-btn" type="button" data-close-take-attendance aria-label="Close attendance register"><i data-lucide="x"></i></button>
+      </div>
+      <div class="take-attendance-body">
+        <div class="attendance-session-fields">
+          <label>Attendance date<input id="takeAttendanceDate" name="attendance_date" type="date" required /></label>
+          <label>Service or event<select id="takeAttendanceEvent" name="event_id" required><option value="">Select a service or event</option></select></label>
+        </div>
+        <div class="attendance-roster-toolbar">
+          <label class="inline-search"><i data-lucide="search"></i><input id="attendanceMemberSearch" type="search" placeholder="Search members..." /></label>
+          <div class="attendance-bulk-actions"><button class="secondary-btn" id="markAllPresent" type="button">Mark all present</button><button class="secondary-btn" id="markAllAbsent" type="button">Mark all absent</button></div>
+        </div>
+        <div class="attendance-roster-summary" id="attendanceRosterSummary" aria-live="polite"></div>
+        <p class="attendance-form-error" id="attendanceFormError" role="alert" hidden></p>
+        <div class="attendance-roster" id="attendanceRoster"></div>
+      </div>
+      <div class="dialog-footer">
+        <button class="secondary-btn" type="button" data-close-take-attendance>Cancel</button>
+        <button class="primary-btn" id="saveAttendanceBtn" type="submit"><i data-lucide="save"></i> Save attendance</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="generationalGroupDialog" class="management-dialog" aria-labelledby="generationalGroupDialogTitle">
+    <form id="generationalGroupForm">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">MEMBERSHIP RULE</p>
+          <h3 id="generationalGroupDialogTitle">Create generational group</h3>
+        </div>
+        <button class="icon-btn" type="button" data-close-generational-group-dialog aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body">
+        <input type="hidden" name="group_id" />
+        <p class="group-form-error" id="generationalGroupFormError" role="alert" hidden></p>
+        <label class="full">Group name<input name="name" required maxlength="100" placeholder="e.g. Senior Adults" /></label>
+        <label>Minimum age<input name="minimum_age" required type="number" min="0" step="1" value="0" /></label>
+        <label>Maximum age<input name="maximum_age" type="number" min="0" step="1" placeholder="No maximum" /><small class="field-note">Leave blank for no upper age limit.</small></label>
+        <label>Gender<select name="gender" required><option>All</option><option>Male</option><option>Female</option></select></label>
+        <label>Status<select name="status" required><option>Active</option><option>Inactive</option></select></label>
+        <label class="full">Description<textarea name="description" maxlength="500" placeholder="Optional note about this classification"></textarea></label>
+      </div>
+      <div class="dialog-footer">
+        <button class="secondary-btn" type="button" data-close-generational-group-dialog>Cancel</button>
+        <button class="primary-btn" id="saveGenerationalGroupBtn" type="submit">Create group</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="userDialog" class="management-dialog">
     <form id="userForm">
       <div class="dialog-header">
-        <div><p class="eyebrow" id="userDialogEyebrow">NEW ACCOUNT</p><h3 id="userDialogTitle">Add administrator</h3></div>
-        <button class="icon-btn" type="button" data-close-user-dialog aria-label="Close"><i data-lucide="x"></i></button>
+        <div>
+          <p class="eyebrow" id="userDialogEyebrow">NEW ACCOUNT</p>
+          <h3 id="userDialogTitle">Add administrator</h3>
+        </div>
+        <button class="icon-btn" type="button" data-close-user-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
       </div>
       <div class="dialog-body user-form-body">
         <input type="hidden" name="user_id" />
         <label class="full">Full name<input name="display_name" required placeholder="e.g. Ama Mensah" /></label>
-        <label class="full">Email address<input name="email" type="email" autocomplete="off" required placeholder="name@example.com" /></label>
+        <label class="full">Email address<input name="email" type="email" autocomplete="off" required
+            placeholder="name@example.com" /></label>
         <label>Phone number<input name="phone" type="tel" placeholder="024 000 0000" /></label>
         <label>Role<select name="role_id" required></select></label>
-        <label class="full create-password-field">Temporary password<span class="password-field"><input name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" /><button type="button" id="generatePassword">Generate</button></span><small>Give this password to the administrator securely.</small></label>
-        <label class="full edit-status-field" hidden>Status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+        <label class="full create-password-field">Temporary password<span class="password-field"><input name="password"
+              type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" /><button
+              type="button" id="generatePassword">Generate</button></span><small>Give this password to the administrator
+            securely.</small></label>
+        <label class="full edit-status-field" hidden>Status<select name="status">
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select></label>
       </div>
-      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-user-dialog>Cancel</button><button class="primary-btn" id="saveUserBtn" type="submit">Create account</button></div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button"
+          data-close-user-dialog>Cancel</button><button class="primary-btn" id="saveUserBtn" type="submit">Create
+          account</button></div>
     </form>
   </dialog>
 
   <dialog id="roleDialog" class="management-dialog role-dialog">
     <form id="roleForm">
       <div class="dialog-header">
-        <div><p class="eyebrow">ACCESS ROLE</p><h3 id="roleDialogTitle">Create role</h3></div>
-        <button class="icon-btn" type="button" data-close-role-dialog aria-label="Close"><i data-lucide="x"></i></button>
+        <div>
+          <p class="eyebrow">ACCESS ROLE</p>
+          <h3 id="roleDialogTitle">Create role</h3>
+        </div>
+        <button class="icon-btn" type="button" data-close-role-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
       </div>
       <div class="dialog-body role-form-body">
         <input type="hidden" name="role_id" />
         <label class="full">Role name<input name="name" required placeholder="e.g. Ministry Coordinator" /></label>
-        <label class="full">Description<textarea name="description" placeholder="Describe who should receive this role"></textarea></label>
-        <fieldset class="full permission-fieldset"><legend>Permissions</legend><div id="permissionOptions"></div></fieldset>
+        <label class="full">Description<textarea name="description"
+            placeholder="Describe who should receive this role"></textarea></label>
+        <fieldset class="full permission-fieldset">
+          <legend>Permissions</legend>
+          <div id="permissionOptions"></div>
+        </fieldset>
       </div>
-      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-role-dialog>Cancel</button><button class="primary-btn" id="saveRoleBtn" type="submit">Save role</button></div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button"
+          data-close-role-dialog>Cancel</button><button class="primary-btn" id="saveRoleBtn" type="submit">Save
+          role</button></div>
     </form>
   </dialog>
 
   <dialog id="passwordDialog" class="management-dialog password-dialog">
     <form id="passwordForm">
-      <div class="dialog-header"><div><p class="eyebrow">ACCOUNT SECURITY</p><h3>Set temporary password</h3></div><button class="icon-btn" type="button" data-close-password-dialog aria-label="Close"><i data-lucide="x"></i></button></div>
-      <div class="dialog-body"><input type="hidden" name="user_id" /><label class="full">New password<input name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters" /></label><p class="full dialog-note">The administrator can use this password immediately on the sign-in page.</p></div>
-      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-password-dialog>Cancel</button><button class="primary-btn" type="submit">Update password</button></div>
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">ACCOUNT SECURITY</p>
+          <h3>Set temporary password</h3>
+        </div><button class="icon-btn" type="button" data-close-password-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body"><input type="hidden" name="user_id" /><label class="full">New password<input
+            name="password" type="password" autocomplete="new-password" minlength="8" required
+            placeholder="At least 8 characters" /></label>
+        <p class="full dialog-note">The administrator can use this password immediately on the sign-in page.</p>
+      </div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button"
+          data-close-password-dialog>Cancel</button><button class="primary-btn" type="submit">Update password</button>
+      </div>
     </form>
   </dialog>
 
   <script src="components/sidebar.js"></script>
   <script src="components/profile.js"></script>
   <script src="components/user-management.js"></script>
+  <script src="components/generational-groups.js"></script>
+  <script src="components/attendance.js"></script>
+  <script src="components/finance.js"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
