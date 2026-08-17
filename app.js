@@ -23,7 +23,6 @@
     transactions: [],
     events: [],
     attendance_records: [],
-    member_attendance_records: [],
     dialogType: null,
     editingId: null,
     viewingMemberId: null,
@@ -187,20 +186,10 @@
       metricCard("Giving this month", money.format(income), `${monthCollections.length || monthTransactions.length} record${(monthCollections.length || monthTransactions.length) === 1 ? "" : "s"}`, "hand-coins", "#087a38"),
       metricCard("Upcoming events", upcoming.length, "Next 30 days", "calendar-days", "#b54708")
     ].join("");
-    const memberAttendanceSessions = new Map();
-    state.member_attendance_records.forEach(record => {
-      const key = `${record.attendance_date}|${record.event_id}`;
-      const event = Array.isArray(record.events) ? record.events[0] : record.events;
-      if (!memberAttendanceSessions.has(key)) memberAttendanceSessions.set(key, { service_date: record.attendance_date, service_name: event?.title || "Service or event", total: 0 });
-      if (record.status === "Present") memberAttendanceSessions.get(key).total += 1;
-    });
-    const liveAttendance = Array.from(memberAttendanceSessions.values()).sort((a, b) => a.service_date.localeCompare(b.service_date)).slice(-7);
-    const attendance = liveAttendance.length
-      ? liveAttendance
-      : state.attendance_records.slice().sort((a, b) => a.service_date.localeCompare(b.service_date)).slice(-7).map(record => ({ ...record, total: Number(record.adults || 0) + Number(record.children || 0) + Number(record.visitors || 0) }));
+    const attendance = state.attendance_records.slice().sort((a, b) => a.service_date.localeCompare(b.service_date) || String(a.created_at).localeCompare(String(b.created_at))).slice(-7);
     if (attendance.length) {
       const latest = attendance[attendance.length - 1];
-      const totals = attendance.map(record => Number(record.total || 0));
+      const totals = attendance.map(record => Number(record.grand_total ?? (Number(record.adults || 0) + Number(record.children || 0) + Number(record.visitors || 0))));
       const maxAttendance = Math.max(...totals, 1);
       $("#lastAttendance").textContent = totals[totals.length - 1];
       $("#attendanceNote").textContent = `${latest.service_name} · ${shortDate.format(new Date(`${latest.service_date}T00:00:00`))}`;
@@ -366,7 +355,6 @@
   }
 
   function renderAll() {
-    window.AttendanceModule?.syncReferenceData(state.members, state.events);
     renderDashboard();
     renderMembers();
     renderFinance();
@@ -395,6 +383,25 @@
       <label>Date joined<input name="joined_at" type="date" value="${esc(member.joined_at || todayIso())}" /></label>`;
   }
 
+  function memberGivingMarkup(memberId, from = "", to = "") {
+    if (!hasPermission("finance.view")) return "";
+    const allRecords = window.FinanceModule?.getMemberGiving(memberId) || [];
+    const records = allRecords.filter(item => !from || item.collection_date >= from).filter(item => !to || item.collection_date <= to);
+    const accounted = records.filter(item => !["Pending", "Voided"].includes(item.status));
+    const totalFor = type => accounted.filter(item => item.collection_type === type).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const total = accounted.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const monthly = accounted.filter(item => item.collection_date?.startsWith(monthKey())).reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const givingMoney = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS", minimumFractionDigits: 2 });
+    return `<section class="member-giving-section"><div class="member-giving-heading"><div><p class="eyebrow">PRIVATE FINANCIAL RECORD</p><h4>Giving / Financial History</h4><p>Visible only to users with finance access.</p></div>${hasPermission("finance.manage") ? `<div class="member-giving-actions"><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Tithe"><i data-lucide="plus"></i> Tithe</button><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Vote of Thanks (VTO)"><i data-lucide="plus"></i> VTO</button></div>` : ""}</div><div class="member-giving-summary"><div><span>Total Tithes</span><strong>${givingMoney.format(totalFor("Tithe"))}</strong></div><div><span>Total VTO</span><strong>${givingMoney.format(totalFor("Vote of Thanks (VTO)"))}</strong></div><div><span>Total Giving</span><strong>${givingMoney.format(total)}</strong></div><div><span>Transactions</span><strong>${accounted.length}</strong></div><div><span>This Month</span><strong>${givingMoney.format(monthly)}</strong></div></div><div class="member-giving-filters"><label>From<input type="date" data-member-giving-from value="${esc(from)}"></label><label>To<input type="date" data-member-giving-to value="${esc(to)}"></label></div><div class="table-scroll"><table class="member-giving-table"><thead><tr><th>Date</th><th>Occasion / Service</th><th>Type</th><th>Status</th><th>Amount</th></tr></thead><tbody>${records.length ? records.map(item => { const event = Array.isArray(item.events) ? item.events[0] : item.events; return `<tr><td>${esc(formatMemberDate(item.collection_date))}</td><td>${esc(item.service_name || event?.title || "Unspecified service")}</td><td>${esc(item.collection_type)}</td><td><span class="finance-status ${esc(item.status.toLowerCase())}">${esc(item.status)}</span></td><td>${givingMoney.format(Number(item.amount || 0))}</td></tr>`; }).join("") : `<tr><td colspan="5"><div class="member-giving-empty">No giving transactions match this date range.</div></td></tr>`}</tbody></table></div></section>`;
+  }
+
+  function renderMemberGivingSection() {
+    const node = $(".member-giving-section"); if (!node || !state.viewingMemberId) return;
+    const from = $("[data-member-giving-from]", node)?.value || ""; const to = $("[data-member-giving-to]", node)?.value || "";
+    node.outerHTML = memberGivingMarkup(state.viewingMemberId, from, to);
+    refreshIcons();
+  }
+
   function openMemberProfile(member) {
     if (!member) return;
     state.viewingMemberId = member.id;
@@ -411,7 +418,7 @@
       <div class="member-profile-field classification"><span>Age-based group</span><strong>${esc(presentation.label)}</strong><small><i data-lucide="sparkles"></i>Automatically determined from date of birth and the church's active rules</small></div>
       <div class="member-profile-field"><span>Actual fellowship / department</span><strong>${esc(member.group_name || "None recorded")}</strong></div>
       <div class="member-profile-field"><span>Contact</span><strong>${esc(member.phone || member.email || "None recorded")}</strong></div>
-    </div>`;
+    </div>${memberGivingMarkup(member.id)}`;
     $("#editMemberFromProfile").hidden = !hasPermission("members.manage");
     $("#memberProfileDialog").showModal();
     refreshIcons();
@@ -430,10 +437,6 @@
     return `<label class="full">Display name<input name="display_name" required value="${esc(profile.name)}" placeholder="e.g. Ama Mensah" /></label><label>Access role<input value="${esc(profile.role)}" disabled /></label><label>Phone number<input name="phone" type="tel" value="${esc(profile.phone)}" placeholder="024 000 0000" /></label><label class="full">Account email<input value="${esc(profile.email || "Sign in to view account email")}" disabled /></label>`;
   }
 
-  function attendanceFields() {
-    return `<label class="full">Service or programme<input name="service_name" required placeholder="e.g. Sunday Worship Service" /></label><label>Service date<input name="service_date" required type="date" value="${todayIso()}" /></label><label>Adults<input name="adults" required type="number" min="0" value="0" /></label><label>Children<input name="children" required type="number" min="0" value="0" /></label><label>Visitors<input name="visitors" required type="number" min="0" value="0" /></label>`;
-  }
-
   function options(values, selected) {
     return values.map(value => `<option ${value === selected ? "selected" : ""}>${esc(value)}</option>`).join("");
   }
@@ -445,7 +448,6 @@
       member: [record ? "EDIT RECORD" : "NEW MEMBER", record ? "Edit member details" : "Add new member", memberFields(record || {})],
       transaction: ["NEW TRANSACTION", "Record a transaction", transactionFields()],
       event: ["NEW PROGRAMME", "Create an event", eventFields()],
-      attendance: ["SERVICE RECORD", "Record attendance", attendanceFields()],
       profile: ["ADMINISTRATOR ACCOUNT", "Edit your profile", profileFields()]
     }[type];
     $("#dialogEyebrow").textContent = config[0];
@@ -488,11 +490,6 @@
         const saved = await persistInsert("events", record);
         state.events.push(saved);
         toast("Event added to the programme.");
-      } else if (state.dialogType === "attendance") {
-        const record = { ...values, adults: Number(values.adults), children: Number(values.children), visitors: Number(values.visitors), id: uid(), created_at: new Date().toISOString() };
-        const saved = await persistInsert("attendance_records", record);
-        state.attendance_records.unshift(saved);
-        toast("Service attendance recorded.");
       } else if (state.dialogType === "profile") {
         const profile = { display_name: values.display_name, phone: values.phone };
         if (state.dataMode === "supabase" && state.client) {
@@ -507,7 +504,7 @@
         updateProfileUI();
         toast("Profile details updated.");
       }
-      const tableByDialog = { member: "members", transaction: "transactions", event: "events", attendance: "attendance_records" };
+      const tableByDialog = { member: "members", transaction: "transactions", event: "events" };
       if (state.dataMode !== "supabase" && tableByDialog[state.dialogType]) storeDemoData(tableByDialog[state.dialogType]);
       $("#entryDialog").close();
       renderAll();
@@ -620,7 +617,6 @@
       state.transactions = [];
       state.events = [];
       state.attendance_records = [];
-      state.member_attendance_records = [];
       liveTables.forEach(([table], index) => { state[table] = results[index].data || []; });
       state.dataMode = "supabase";
       applyPermissions();
@@ -638,10 +634,9 @@
           client,
           userId: state.user.id,
           permissions: state.permissions,
-          members: state.members,
-          events: state.events,
+          records: state.attendance_records,
           onChange: records => {
-            state.member_attendance_records = records;
+            state.attendance_records = records;
             renderDashboard();
             refreshIcons();
           }
@@ -734,7 +729,10 @@
         navigate("attendance");
         window.AttendanceModule?.openTakeAttendance();
       }
-      if (action === "add-attendance-summary") openDialog("attendance");
+      if (action === "add-attendance-summary") {
+        navigate("attendance");
+        window.AttendanceModule?.openTakeAttendance();
+      }
       const viewId = event.target.closest("[data-view-member]")?.dataset.viewMember;
       if (viewId) openMemberProfile(state.members.find(member => member.id === viewId));
       const editId = event.target.closest("[data-edit-member]")?.dataset.editMember;
@@ -743,7 +741,13 @@
       if (memberId) removeRecord("members", memberId);
       const transactionId = event.target.closest("[data-delete-transaction]")?.dataset.deleteTransaction;
       if (transactionId) removeRecord("transactions", transactionId);
+      const givingButton = event.target.closest("[data-record-member-giving]");
+      if (givingButton) {
+        const givingMemberId = givingButton.dataset.recordMemberGiving; const givingType = givingButton.dataset.givingType || "Tithe";
+        $("#memberProfileDialog").close(); navigate("finance"); window.FinanceModule?.openMemberGiving(givingMemberId, givingType);
+      }
     });
+    document.addEventListener("input", event => { if (event.target.matches("[data-member-giving-from],[data-member-giving-to]")) renderMemberGivingSection(); });
     $("#memberSearch").addEventListener("input", () => { renderMembers(); refreshIcons(); });
     $("#memberStatusFilter").addEventListener("change", () => { renderMembers(); refreshIcons(); });
     $("#eventTypeFilter").addEventListener("change", () => { renderEvents(); refreshIcons(); });

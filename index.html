@@ -76,7 +76,8 @@
                   <p class="eyebrow">SERVICE PARTICIPATION</p>
                   <h3>Attendance trend</h3>
                 </div>
-                <button class="text-btn" data-action="add-attendance-summary" data-requires="attendance.manage">Record service totals <i data-lucide="plus"></i></button>
+                <button class="text-btn" data-action="add-attendance-summary" data-requires="attendance.manage">Record
+                  attendance <i data-lucide="plus"></i></button>
               </div>
               <div class="attendance-summary"><strong id="lastAttendance">—</strong><span id="attendanceNote">No
                   attendance records yet</span></div>
@@ -141,7 +142,8 @@
                 data-lucide="user-plus"></i> Add new member</button>
           </div>
           <div class="summary-strip" id="memberSummary"></div>
-          <div class="generational-summary" id="memberGenerationalSummary" aria-label="Current age-based membership groups" aria-live="polite"></div>
+          <div class="generational-summary" id="memberGenerationalSummary"
+            aria-label="Current age-based membership groups" aria-live="polite"></div>
           <article class="card table-card">
             <div class="table-toolbar">
               <label class="inline-search"><i data-lucide="search"></i><input id="memberSearch" type="search"
@@ -179,66 +181,7 @@
         </section>
 
         <section class="page" id="page-attendance" data-page-title="Attendance">
-          <div class="page-heading">
-            <div>
-              <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Attendance</p>
-              <h2>Attendance</h2>
-              <p>Track and manage church attendance.</p>
-            </div>
-            <button class="primary-btn" id="takeAttendanceBtn" type="button" data-requires="attendance.manage"><i data-lucide="plus"></i> Take Attendance</button>
-          </div>
-
-          <div class="metric-grid attendance-metrics-grid" id="attendanceMetrics"></div>
-
-          <div class="attendance-insights-grid">
-            <article class="card attendance-trend-card">
-              <div class="card-heading">
-                <div>
-                  <p class="eyebrow">ATTENDANCE TREND</p>
-                  <h3>Increase and decrease by service</h3>
-                </div>
-                <span class="attendance-trend-change neutral" id="attendanceTrendChange"><i data-lucide="minus"></i> No comparison</span>
-              </div>
-              <div id="attendanceTrendChart" class="attendance-trend-chart" aria-live="polite"></div>
-              <p class="attendance-chart-caption">Present members per service. Segment colors show movement from the previous service.</p>
-              <div class="attendance-chart-legend" aria-label="Chart legend">
-                <span><i class="increase"></i> Increase</span>
-                <span><i class="decrease"></i> Decrease</span>
-                <span><i class="unchanged"></i> Unchanged</span>
-              </div>
-            </article>
-
-            <article class="card attendance-session-card">
-              <div class="card-heading">
-                <div>
-                  <p class="eyebrow">SERVICE SUMMARY</p>
-                  <h3>Recent attendance</h3>
-                </div>
-              </div>
-              <div id="attendanceSessionSummary"></div>
-            </article>
-          </div>
-
-          <article class="card table-card attendance-records-card">
-            <div class="table-toolbar attendance-toolbar">
-              <label class="inline-search"><i data-lucide="search"></i><input id="attendanceSearch" type="search" placeholder="Search members or recorders..." /></label>
-              <div class="toolbar-actions attendance-filters">
-                <input id="attendanceDateFilter" type="date" aria-label="Filter attendance by date" />
-                <select id="attendanceEventFilter" aria-label="Filter attendance by service or event"><option value="all">All services/events</option></select>
-                <select id="attendanceStatusFilter" aria-label="Filter attendance by status"><option value="all">All statuses</option><option>Present</option><option>Absent</option><option>Excused</option></select>
-                <button class="secondary-btn" id="clearAttendanceFilters" type="button"><i data-lucide="list-filter"></i> Clear</button>
-              </div>
-            </div>
-            <div class="table-scroll">
-              <table class="attendance-records-table">
-                <thead><tr><th>Member</th><th>Date</th><th>Service/Event</th><th>Status</th><th>Recorded by</th><th>Time recorded</th><th></th></tr></thead>
-                <tbody id="attendanceRecordsTable"></tbody>
-              </table>
-            </div>
-            <div class="table-footer"><span id="attendanceTableCount">No attendance records</span>
-              <div class="pagination"><button id="attendancePreviousPage" type="button" aria-label="Previous attendance page"><i data-lucide="chevron-left"></i></button><button class="active" id="attendancePageNumber" type="button" aria-current="page">1</button><button id="attendanceNextPage" type="button" aria-label="Next attendance page"><i data-lucide="chevron-right"></i></button></div>
-            </div>
-          </article>
+          <div id="attendanceModuleRoot"></div>
         </section>
 
         <section class="page" id="page-finance" data-page-title="Finance">
@@ -457,12 +400,14 @@
                 <div>
                   <p class="eyebrow">MEMBERSHIP</p>
                   <h3>Generational groups</h3>
-                  <p class="group-rules-intro">Define the inclusive age and gender rules used to classify members automatically. These rules do not change actual fellowship or department participation.</p>
+                  <p class="group-rules-intro">Define the inclusive age and gender rules used to classify members
+                    automatically. These rules do not change actual fellowship or department participation.</p>
                 </div>
               </div>
               <div class="generational-rules-toolbar">
                 <span id="generationalGroupsCount">Loading group rules…</span>
-                <button class="primary-btn" id="addGenerationalGroupBtn" type="button" data-requires="settings.manage"><i data-lucide="plus"></i> Add group</button>
+                <button class="primary-btn" id="addGenerationalGroupBtn" type="button"
+                  data-requires="settings.manage"><i data-lucide="plus"></i> Add group</button>
               </div>
               <div class="table-scroll">
                 <table class="generational-groups-table">
@@ -478,7 +423,9 @@
                   <tbody id="generationalGroupsTable"></tbody>
                 </table>
               </div>
-              <p class="group-rule-guidance"><i data-lucide="info"></i><span>Age ranges include both boundary ages. Active rules may overlap only when one applies exclusively to males and the other exclusively to females.</span></p>
+              <p class="group-rule-guidance"><i data-lucide="info"></i><span>Age ranges include both boundary ages.
+                  Active rules may overlap only when one applies exclusively to males and the other exclusively to
+                  females.</span></p>
             </article>
           </div>
         </section>
@@ -520,42 +467,15 @@
           <p id="memberProfileMeta"></p>
         </div>
       </div>
-      <button class="icon-btn" type="button" data-close-member-profile aria-label="Close member profile"><i data-lucide="x"></i></button>
+      <button class="icon-btn" type="button" data-close-member-profile aria-label="Close member profile"><i
+          data-lucide="x"></i></button>
     </div>
     <div class="dialog-body member-profile-body" id="memberProfileBody"></div>
     <div class="dialog-footer">
       <button class="secondary-btn" type="button" data-close-member-profile>Close</button>
-      <button class="primary-btn" id="editMemberFromProfile" type="button" data-requires="members.manage"><i data-lucide="pencil"></i> Edit member</button>
+      <button class="primary-btn" id="editMemberFromProfile" type="button" data-requires="members.manage"><i
+          data-lucide="pencil"></i> Edit member</button>
     </div>
-  </dialog>
-
-  <dialog id="takeAttendanceDialog" class="take-attendance-dialog" aria-labelledby="takeAttendanceDialogTitle">
-    <form id="takeAttendanceForm">
-      <div class="dialog-header">
-        <div>
-          <p class="eyebrow">ATTENDANCE REGISTER</p>
-          <h3 id="takeAttendanceDialogTitle">Take attendance</h3>
-        </div>
-        <button class="icon-btn" type="button" data-close-take-attendance aria-label="Close attendance register"><i data-lucide="x"></i></button>
-      </div>
-      <div class="take-attendance-body">
-        <div class="attendance-session-fields">
-          <label>Attendance date<input id="takeAttendanceDate" name="attendance_date" type="date" required /></label>
-          <label>Service or event<select id="takeAttendanceEvent" name="event_id" required><option value="">Select a service or event</option></select></label>
-        </div>
-        <div class="attendance-roster-toolbar">
-          <label class="inline-search"><i data-lucide="search"></i><input id="attendanceMemberSearch" type="search" placeholder="Search members..." /></label>
-          <div class="attendance-bulk-actions"><button class="secondary-btn" id="markAllPresent" type="button">Mark all present</button><button class="secondary-btn" id="markAllAbsent" type="button">Mark all absent</button></div>
-        </div>
-        <div class="attendance-roster-summary" id="attendanceRosterSummary" aria-live="polite"></div>
-        <p class="attendance-form-error" id="attendanceFormError" role="alert" hidden></p>
-        <div class="attendance-roster" id="attendanceRoster"></div>
-      </div>
-      <div class="dialog-footer">
-        <button class="secondary-btn" type="button" data-close-take-attendance>Cancel</button>
-        <button class="primary-btn" id="saveAttendanceBtn" type="submit"><i data-lucide="save"></i> Save attendance</button>
-      </div>
-    </form>
   </dialog>
 
   <dialog id="generationalGroupDialog" class="management-dialog" aria-labelledby="generationalGroupDialogTitle">
@@ -565,17 +485,28 @@
           <p class="eyebrow">MEMBERSHIP RULE</p>
           <h3 id="generationalGroupDialogTitle">Create generational group</h3>
         </div>
-        <button class="icon-btn" type="button" data-close-generational-group-dialog aria-label="Close"><i data-lucide="x"></i></button>
+        <button class="icon-btn" type="button" data-close-generational-group-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
       </div>
       <div class="dialog-body">
         <input type="hidden" name="group_id" />
         <p class="group-form-error" id="generationalGroupFormError" role="alert" hidden></p>
-        <label class="full">Group name<input name="name" required maxlength="100" placeholder="e.g. Senior Adults" /></label>
+        <label class="full">Group name<input name="name" required maxlength="100"
+            placeholder="e.g. Senior Adults" /></label>
         <label>Minimum age<input name="minimum_age" required type="number" min="0" step="1" value="0" /></label>
-        <label>Maximum age<input name="maximum_age" type="number" min="0" step="1" placeholder="No maximum" /><small class="field-note">Leave blank for no upper age limit.</small></label>
-        <label>Gender<select name="gender" required><option>All</option><option>Male</option><option>Female</option></select></label>
-        <label>Status<select name="status" required><option>Active</option><option>Inactive</option></select></label>
-        <label class="full">Description<textarea name="description" maxlength="500" placeholder="Optional note about this classification"></textarea></label>
+        <label>Maximum age<input name="maximum_age" type="number" min="0" step="1" placeholder="No maximum" /><small
+            class="field-note">Leave blank for no upper age limit.</small></label>
+        <label>Gender<select name="gender" required>
+            <option>All</option>
+            <option>Male</option>
+            <option>Female</option>
+          </select></label>
+        <label>Status<select name="status" required>
+            <option>Active</option>
+            <option>Inactive</option>
+          </select></label>
+        <label class="full">Description<textarea name="description" maxlength="500"
+            placeholder="Optional note about this classification"></textarea></label>
       </div>
       <div class="dialog-footer">
         <button class="secondary-btn" type="button" data-close-generational-group-dialog>Cancel</button>

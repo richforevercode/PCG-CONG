@@ -1,7 +1,10 @@
 (function () {
   "use strict";
 
-  const COLLECTION_TYPES = ["Tithe", "Vote of Thanks (VTO)", "Children's Service Offertory", "Junior Youth (JY)", "Adult Offertory"];
+  const COLLECTION_TYPES = ["Tithe", "Vote of Thanks (VTO)", "Sunday Offertory", "Children's Service Offertory", "Junior Youth Offertory", "Thanksgiving", "Donation", "Other", "Junior Youth (JY)", "Adult Offertory"];
+  const MEMBER_GIVING_TYPES = new Set(["Tithe", "Vote of Thanks (VTO)"]);
+  const OFFERTORY_TYPES = new Set(["Sunday Offertory", "Adult Offertory", "Children's Service Offertory", "Junior Youth Offertory", "Junior Youth (JY)"]);
+  const SERVICE_NAMES = ["Sunday Divine Service", "Thanksgiving Service", "Harvest Service", "Communion Service", "Youth Service", "Children's Service", "Junior Youth Service", "Evangelism Service", "Funeral Service", "Wedding Service", "Special Programme", "Other"];
   const METHODS = ["Cash", "Mobile Money", "Bank", "Other"];
   const OCCASIONS = ["Birthday", "Anniversary", "Graduation", "Marriage", "Child Dedication", "Thanksgiving", "New Job", "Other"];
   const EXPENSE_CATEGORIES = ["Utilities", "Maintenance", "Repairs", "Transport", "Stationery", "Events", "Ministry", "Welfare", "Bank Charges", "Salaries/Allowances", "Other"];
@@ -16,7 +19,7 @@
   const state = {
     client: null, userId: null, permissions: [], members: [], events: [], legacyTransactions: [],
     collections: [], expenses: [], funds: [], remittances: [], transfers: [], rules: [], audit: [],
-    section: "dashboard", page: 1, loading: false, initialized: false, bound: false
+    section: "dashboard", page: 1, loading: false, initialized: false, bound: false, editingCollectionId: null
   };
 
   const $ = selector => document.querySelector(selector);
@@ -57,17 +60,20 @@
       <div id="financeContent"><div class="finance-loading"><span></span><p>Loading secure financial records…</p></div></div>
 
       <dialog id="financeCollectionDialog" class="finance-dialog"><form id="financeCollectionForm">
+        <input type="hidden" name="collection_id" />
         <div class="dialog-header"><div><p class="eyebrow">COLLECTION ENTRY</p><h3>Record collection</h3></div><button class="icon-btn" type="button" data-close-finance="financeCollectionDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
         <div class="dialog-body">
           <label>Collection date<input name="collection_date" type="date" required /></label>
           <label>Collection type<select name="collection_type" required>${optionList(COLLECTION_TYPES)}</select></label>
-          <label>Service<select name="event_id"><option value="">No linked service</option></select></label>
-          <label>Member / person<select name="member_id"><option value="">Not member-specific</option></select></label>
+          <label>Occasion / service<select name="service_name" required>${optionList(SERVICE_NAMES)}</select></label>
+          <label id="financeCustomServiceField" hidden>Custom occasion / service<input name="custom_service_name" placeholder="e.g. Annual harvest" /></label>
+          <label>Scheduled programme (optional)<select name="event_id"><option value="">No linked programme</option></select></label>
+          <label id="financeMemberField">Member / giver<select name="member_id"><option value="">General collection</option></select><small id="financeMemberHint">Required for Tithe and VTO.</small></label>
           <label>Amount (GH₵)<input name="amount" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
           <label>Method<select name="collection_method">${optionList(METHODS)}</select></label>
           <label>Fund / account<select name="fund_id" required></select></label>
           <label>Reference number<input name="reference_number" placeholder="Optional receipt or bank reference" /></label>
-          <label class="full" id="financeOccasionField" hidden>VTO occasion<select name="occasion">${optionList(OCCASIONS)}</select></label>
+          <label class="full" id="financeOccasionField" hidden>VTO reason<select name="occasion">${optionList(OCCASIONS)}</select></label>
           <label>Status<select name="status"><option>Pending</option><option>Counted</option><option data-verify-option>Verified</option><option>Deposited</option><option data-verify-option>Reconciled</option></select></label>
           <label class="full">Description / notes<textarea name="description" placeholder="Collection notes…"></textarea></label>
           <div class="full distribution-preview" id="financeDistributionPreview" hidden></div>
@@ -121,6 +127,34 @@
 
   function collectionTotal(type = null) {
     return state.collections.filter(item => accountedCollection(item) && (!type || item.collection_type === type)).reduce((sum, item) => sum + num(item.amount), 0);
+  }
+
+  function collectionTotalForTypes(types) {
+    return state.collections.filter(item => accountedCollection(item) && types.has(item.collection_type)).reduce((sum, item) => sum + num(item.amount), 0);
+  }
+
+  function periodGiving(prefix) {
+    return state.collections.filter(item => accountedCollection(item) && item.collection_date?.startsWith(prefix)).reduce((sum, item) => sum + num(item.amount), 0);
+  }
+
+  function serviceLabel(item) {
+    const event = relation(item, "events") || state.events.find(entry => entry.id === item.event_id);
+    return item.service_name || event?.title || "Unspecified service";
+  }
+
+  function serviceGivingTotals(records = state.collections.filter(accountedCollection)) {
+    const groups = new Map();
+    records.forEach(item => {
+      const name = serviceLabel(item); const key = `${item.collection_date}|${name.toLowerCase()}`;
+      const group = groups.get(key) || { key, date: item.collection_date, service: name, tithes: 0, vto: 0, offertory: 0, other: 0, total: 0, transactions: 0, members: new Set() };
+      const amount = num(item.amount);
+      if (item.collection_type === "Tithe") group.tithes += amount;
+      else if (item.collection_type === "Vote of Thanks (VTO)") group.vto += amount;
+      else if (OFFERTORY_TYPES.has(item.collection_type)) group.offertory += amount;
+      else group.other += amount;
+      group.total += amount; group.transactions += 1; if (item.member_id) group.members.add(item.member_id); groups.set(key, group);
+    });
+    return Array.from(groups.values()).sort((a, b) => b.date.localeCompare(a.date) || a.service.localeCompare(b.service));
   }
 
   function currentChurchBalance() {
@@ -206,20 +240,22 @@
     const grid = [0, .25, .5, .75, 1].map(fraction => { const y = top + fraction * (height - top - bottom); const value = max * (1 - fraction); return `<line x1="${left}" y1="${y}" x2="${width - right}" y2="${y}"/><text x="${left - 9}" y="${y + 4}" text-anchor="end">${esc(compactMoney.format(value))}</text>`; }).join("");
     const line = points.map(point => `${point.x},${point.y}`).join(" ");
     const area = `${left},${height - bottom} ${line} ${points.at(-1).x},${height - bottom}`;
-    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(readableType)} trend"><g class="finance-chart-grid">${grid}</g><polygon class="finance-chart-area" points="${area}"/><polyline class="finance-chart-line" points="${line}"/>${points.map(point => `<g><circle cx="${point.x}" cy="${point.y}" r="5"><title>${esc(point.label)}: ${money.format(point.value)}</title></circle><text class="finance-chart-value" x="${point.x}" y="${point.y - 12}" text-anchor="middle">${esc(compactMoney.format(point.value))}</text><text class="finance-chart-label" x="${point.x}" y="${height - 19}" text-anchor="middle">${esc(point.label)}</text></g>`).join("")}</svg>`;
+    const segments = points.slice(1).map((point, index) => { const previous = points[index]; const movement = point.value > previous.value ? "increase" : point.value < previous.value ? "decrease" : "stable"; return `<line class="finance-chart-segment ${movement}" x1="${previous.x}" y1="${previous.y}" x2="${point.x}" y2="${point.y}"><title>${esc(previous.label)} to ${esc(point.label)}: ${movement}</title></line>`; }).join("");
+    container.innerHTML = `<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${esc(readableType)} trend"><g class="finance-chart-grid">${grid}</g><polygon class="finance-chart-area" points="${area}"/>${segments}${points.length === 1 ? `<circle class="finance-chart-only-point" cx="${points[0].x}" cy="${points[0].y}" r="5"/>` : ""}${points.map(point => `<g><circle cx="${point.x}" cy="${point.y}" r="5"><title>${esc(point.label)}: ${money.format(point.value)}</title></circle><text class="finance-chart-value" x="${point.x}" y="${point.y - 12}" text-anchor="middle">${esc(compactMoney.format(point.value))}</text><text class="finance-chart-label" x="${point.x}" y="${height - 19}" text-anchor="middle">${esc(point.label)}</text></g>`).join("")}</svg>`;
     refreshIcons();
   }
 
   function dashboardMarkup() {
     const district = districtTotals();
     const expenses = state.expenses.filter(paidExpense).reduce((sum, item) => sum + num(item.amount), 0) + state.legacyTransactions.filter(item => item.type === "Expense").reduce((sum,item)=>sum+num(item.amount),0);
+    const currentMonth = todayIso().slice(0, 7); const currentYear = todayIso().slice(0, 4);
     return `<div class="finance-metric-grid">
-      ${metric("Total Collections", money.format(collectionTotal()), `${state.collections.filter(accountedCollection).length} accounted records`, "hand-coins", "green")}
       ${metric("Total Tithes", money.format(collectionTotal("Tithe")), "Member giving", "badge-cent", "blue")}
       ${metric("Total VTO", money.format(collectionTotal("Vote of Thanks (VTO)")), "Vote of Thanks", "heart-handshake", "red")}
-      ${metric("Children's Offertory", money.format(collectionTotal("Children's Service Offertory")), "Children's service", "baby", "orange")}
-      ${metric("Junior Youth (JY)", money.format(collectionTotal("Junior Youth (JY)")), "JY collections", "users-round", "blue")}
-      ${metric("Adult Offertory", money.format(collectionTotal("Adult Offertory")), "Sunday adult offertory", "church", "green")}
+      ${metric("Total Offertory", money.format(collectionTotalForTypes(OFFERTORY_TYPES)), "All church offertory types", "church", "orange")}
+      ${metric("Total Giving", money.format(collectionTotal()), `${state.collections.filter(accountedCollection).length} accounted transactions`, "hand-coins", "green")}
+      ${metric("Giving This Month", money.format(periodGiving(currentMonth)), currentMonth, "calendar-range", "blue")}
+      ${metric("Giving This Year", money.format(periodGiving(currentYear)), currentYear, "calendar-days", "green")}
       ${metric("Total Expenses", money.format(expenses), "Paid expenses and posted legacy expenses", "receipt", "red")}
       ${metric("Current Church Balance", money.format(currentChurchBalance()), "Opening balances + church shares + legacy net − paid expenses", "landmark", "blue")}
       ${metric("District Amount Due", money.format(district.due), "Calculated distribution shares", "building-2", "orange")}
@@ -229,7 +265,7 @@
     <div class="finance-dashboard-grid">
       <article class="card finance-trend-card"><div class="finance-card-heading"><div><p class="eyebrow">FINANCIAL GROWTH</p><h3>Collections over time</h3></div><div class="finance-chart-controls"><select id="financeGrowthType" aria-label="Collection type"><option value="all">All Collections</option>${optionList(COLLECTION_TYPES)}</select><select id="financeGranularity" aria-label="Chart period"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option></select></div></div>
         <div class="finance-comparison-controls"><select id="financeComparison"><option value="week">This week vs last week</option><option value="month" selected>This month vs last month</option><option value="quarter">This quarter vs previous quarter</option><option value="year">This year vs previous year</option><option value="custom">Custom range vs previous equivalent</option></select><div id="financeCustomRange" hidden><input id="financeCustomStart" type="date" aria-label="Custom start date"><input id="financeCustomEnd" type="date" aria-label="Custom end date"></div></div>
-        <div id="financeTrendChart" class="finance-trend-chart"></div>
+        <div id="financeTrendChart" class="finance-trend-chart"></div><div class="finance-trend-legend" aria-label="Trend legend"><span><i class="increase"></i> Increase</span><span><i class="decrease"></i> Decrease</span><span><i class="stable"></i> Stable</span></div>
         <div class="growth-stat-grid"><div><span>Current period</span><strong id="financeCurrentPeriod">GH₵0.00</strong></div><div><span>Previous period</span><strong id="financePreviousPeriod">GH₵0.00</strong></div><div><span>Growth</span><strong class="growth-badge stable" id="financeGrowthBadge">0% Stable</strong></div></div>
         <p class="finance-growth-summary" id="financeGrowthSummary"></p>
       </article>
@@ -238,16 +274,18 @@
   }
 
   function collectionFiltersMarkup() {
-    return `<div class="finance-filters"><label class="finance-search"><i data-lucide="search"></i><input id="financeRecordSearch" type="search" placeholder="Search reference, member, service, or notes…"></label><input id="financeDateFrom" type="date" aria-label="From date"><input id="financeDateTo" type="date" aria-label="To date"><select id="financeStatusFilter" aria-label="Status"><option value="all">All statuses</option>${optionList(["Pending","Counted","Verified","Deposited","Reconciled","Voided"])}</select></div>`;
+    const members = state.members.slice().sort((a, b) => fullName(a).localeCompare(fullName(b)));
+    const services = Array.from(new Set(state.collections.map(serviceLabel).filter(Boolean))).sort();
+    return `<div class="finance-filters"><label class="finance-search"><i data-lucide="search"></i><input id="financeRecordSearch" type="search" placeholder="Search reference, member, service, or notes…"></label><input id="financeDateFrom" type="date" aria-label="From date"><input id="financeDateTo" type="date" aria-label="To date"><select id="financeTypeFilter" aria-label="Giving type"><option value="all">All giving types</option>${optionList(COLLECTION_TYPES)}</select><select id="financeMemberFilter" aria-label="Member"><option value="all">All members</option>${members.map(member => `<option value="${member.id}">${esc(fullName(member))}</option>`).join("")}</select><select id="financeServiceFilter" aria-label="Service or occasion"><option value="all">All services / occasions</option>${services.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join("")}</select><select id="financeStatusFilter" aria-label="Status"><option value="all">All statuses</option>${optionList(["Pending","Counted","Verified","Deposited","Reconciled","Voided"])}</select></div>`;
   }
 
   function filteredCollections() {
     const forced = sectionTypes[state.section]; const search = ($("#financeRecordSearch")?.value || "").trim().toLowerCase();
-    const from = $("#financeDateFrom")?.value || ""; const to = $("#financeDateTo")?.value || ""; const status = $("#financeStatusFilter")?.value || "all";
-    return state.collections.filter(item => !forced || item.collection_type === forced).filter(item => !from || item.collection_date >= from).filter(item => !to || item.collection_date <= to).filter(item => status === "all" || item.status === status).filter(item => {
+    const from = $("#financeDateFrom")?.value || ""; const to = $("#financeDateTo")?.value || ""; const status = $("#financeStatusFilter")?.value || "all"; const type = $("#financeTypeFilter")?.value || "all"; const memberId = $("#financeMemberFilter")?.value || "all"; const service = $("#financeServiceFilter")?.value || "all";
+    return state.collections.filter(item => !forced || item.collection_type === forced).filter(item => type === "all" || item.collection_type === type).filter(item => memberId === "all" || item.member_id === memberId).filter(item => service === "all" || serviceLabel(item) === service).filter(item => !from || item.collection_date >= from).filter(item => !to || item.collection_date <= to).filter(item => status === "all" || item.status === status).filter(item => {
       const member = relation(item, "members") || state.members.find(entry => entry.id === item.member_id);
       const event = relation(item, "events") || state.events.find(entry => entry.id === item.event_id);
-      return !search || [item.collection_type, item.reference_number, item.description, item.occasion, fullName(member), event?.title].join(" ").toLowerCase().includes(search);
+      return !search || [item.collection_type, item.reference_number, item.description, item.occasion, serviceLabel(item), fullName(member), event?.title].join(" ").toLowerCase().includes(search);
     }).sort((a, b) => b.collection_date.localeCompare(a.collection_date) || b.created_at.localeCompare(a.created_at));
   }
 
@@ -256,8 +294,8 @@
     const rows = records.slice((state.page - 1) * PAGE_SIZE, state.page * PAGE_SIZE);
     return `<div class="table-scroll"><table class="finance-table"><thead><tr><th>Date</th><th>Collection</th><th>Member / Service</th><th>Method</th><th>Status</th><th>Amount</th><th>Distribution</th><th>Recorded by</th><th></th></tr></thead><tbody>${rows.length ? rows.map(item => {
       const member = relation(item, "members") || state.members.find(entry => entry.id === item.member_id); const event = relation(item, "events") || state.events.find(entry => entry.id === item.event_id);
-      const action = can("finance.manage") && item.status !== "Voided" ? `<div class="row-actions">${item.status === "Pending" ? `<button class="icon-btn" data-finance-count="${item.id}" title="Mark counted"><i data-lucide="check"></i></button>` : ""}${item.status === "Counted" && can("finance.verify") ? `<button class="icon-btn" data-finance-verify="${item.id}" title="Verify"><i data-lucide="badge-check"></i></button>` : ""}<button class="icon-btn delete" data-finance-void="collection:${item.id}" title="Void record"><i data-lucide="ban"></i></button></div>` : "";
-      return `<tr><td>${formatDate(item.collection_date)}</td><td><strong>${esc(item.collection_type)}</strong><small>${esc(item.occasion || item.reference_number || "No reference")}</small></td><td><span>${esc(member ? fullName(member) : "General collection")}</span><small>${esc(event?.title || "No linked service")}</small></td><td>${esc(item.collection_method)}</td><td><span class="finance-status ${item.status.toLowerCase()}">${esc(item.status)}</span></td><td class="finance-money">${money.format(num(item.amount))}</td><td>${num(item.district_share) ? `<small>Church ${money.format(num(item.local_share))}<br>${esc(item.district_name_snapshot)} ${money.format(num(item.district_share))}</small>` : "—"}</td><td>${esc(item.recorded_by_name || "Finance officer")}</td><td>${action}</td></tr>`;
+      const action = can("finance.manage") && item.status !== "Voided" ? `<div class="row-actions"><button class="icon-btn" data-finance-edit-collection="${item.id}" title="Edit giving transaction"><i data-lucide="pencil"></i></button>${item.status === "Pending" ? `<button class="icon-btn" data-finance-count="${item.id}" title="Mark counted"><i data-lucide="check"></i></button>` : ""}${item.status === "Counted" && can("finance.verify") ? `<button class="icon-btn" data-finance-verify="${item.id}" title="Verify"><i data-lucide="badge-check"></i></button>` : ""}<button class="icon-btn delete" data-finance-void="collection:${item.id}" title="Void record"><i data-lucide="ban"></i></button></div>` : "";
+      return `<tr><td>${formatDate(item.collection_date)}</td><td><strong>${esc(item.collection_type)}</strong><small>${esc(item.occasion || item.reference_number || "No reference")}</small></td><td><span>${esc(member ? fullName(member) : "General collection")}</span><small>${esc(serviceLabel(item))}${event ? ` · scheduled ${formatDate(event.event_date)}` : ""}</small></td><td>${esc(item.collection_method)}</td><td><span class="finance-status ${item.status.toLowerCase()}">${esc(item.status)}</span></td><td class="finance-money">${money.format(num(item.amount))}</td><td>${num(item.district_share) ? `<small>Church ${money.format(num(item.local_share))}<br>${esc(item.district_name_snapshot)} ${money.format(num(item.district_share))}</small>` : "—"}</td><td>${esc(item.recorded_by_name || "Finance officer")}</td><td>${action}</td></tr>`;
     }).join("") : `<tr><td colspan="9"><div class="finance-empty"><i data-lucide="receipt-text"></i><p>No collection records match these filters.</p></div></td></tr>`}</tbody></table></div><div class="table-footer"><span>${records.length} collection record${records.length === 1 ? "" : "s"}</span><div class="pagination"><button type="button" data-finance-page="previous" ${state.page === 1 ? "disabled" : ""}><i data-lucide="chevron-left"></i></button><button class="active" type="button">${state.page}</button><button type="button" data-finance-page="next" ${state.page === pages ? "disabled" : ""}><i data-lucide="chevron-right"></i></button></div></div>`;
   }
 
@@ -292,9 +330,37 @@
     return `<div class="finance-fund-actions"><button class="secondary-btn" type="button" data-finance-open="transfer" ${!can("finance.manage") || state.funds.filter(item=>item.is_active).length<2?"disabled":""}><i data-lucide="arrow-left-right"></i> Transfer between funds</button></div><div class="finance-fund-grid">${state.funds.length ? state.funds.map(fund => { const totals=fundBalance(fund); return `<article class="card finance-fund"><div><span class="finance-status ${fund.is_active ? "verified" : "voided"}">${fund.is_active ? "Active" : "Inactive"}</span><h3>${esc(fund.name)}</h3><p>${esc(fund.description || "Church fund or designated account")}</p></div><strong>${money.format(totals.current)}</strong><dl><div><dt>Opening</dt><dd>${money.format(num(fund.opening_balance))}</dd></div><div><dt>Income</dt><dd>${money.format(totals.income)}</dd></div><div><dt>Expenses</dt><dd>${money.format(totals.expenses)}</dd></div><div><dt>Transfers in</dt><dd>${money.format(totals.transfersIn)}</dd></div><div><dt>Transfers out</dt><dd>${money.format(totals.transfersOut)}</dd></div></dl></article>`; }).join("") : `<article class="card finance-empty"><p>No funds configured.</p></article>`}</div><article class="card finance-record-card finance-transfer-history"><div class="finance-card-heading"><div><p class="eyebrow">TRANSFER HISTORY</p><h3>Fund transfers</h3></div></div><div class="table-scroll"><table class="finance-table"><thead><tr><th>Date</th><th>From</th><th>To</th><th>Reference</th><th>Status</th><th>Amount</th><th></th></tr></thead><tbody>${state.transfers.length?state.transfers.map(item=>{const from=relation(item,"from_fund")||state.funds.find(f=>f.id===item.from_fund_id);const to=relation(item,"to_fund")||state.funds.find(f=>f.id===item.to_fund_id);return `<tr><td>${formatDate(item.transfer_date)}</td><td>${esc(from?.name||"—")}</td><td>${esc(to?.name||"—")}</td><td>${esc(item.reference_number||"—")}</td><td><span class="finance-status ${item.status.toLowerCase()}">${esc(item.status)}</span></td><td class="finance-money">${money.format(num(item.amount))}</td><td>${can("finance.manage")&&item.status!=="Voided"?`<button class="icon-btn delete" data-finance-void="transfer:${item.id}" title="Void transfer"><i data-lucide="ban"></i></button>`:""}</td></tr>`}).join(""):`<tr><td colspan="7"><div class="finance-empty compact"><p>No fund transfers recorded.</p></div></td></tr>`}</tbody></table></div></article>`;
   }
 
+  function reportFiltersMarkup() {
+    const members = state.members.slice().sort((a, b) => fullName(a).localeCompare(fullName(b)));
+    const services = Array.from(new Set(state.collections.map(serviceLabel).filter(Boolean))).sort();
+    return `<article class="card finance-report-filter-card"><div class="finance-card-heading"><div><p class="eyebrow">REPORT FILTERS</p><h3>Giving reports</h3><p>Filter once to update member, service, monthly, and annual reports.</p></div></div><div class="finance-report-filters"><input id="financeReportFrom" type="date" aria-label="Report start date"><input id="financeReportTo" type="date" aria-label="Report end date"><select id="financeReportType"><option value="all">All giving types</option>${optionList(COLLECTION_TYPES)}</select><select id="financeReportMember"><option value="all">All members</option>${members.map(member => `<option value="${member.id}">${esc(fullName(member))}</option>`).join("")}</select><select id="financeReportService"><option value="all">All services / occasions</option>${services.map(value => `<option value="${esc(value)}">${esc(value)}</option>`).join("")}</select></div></article>`;
+  }
+
+  function filteredReportCollections() {
+    const from = $("#financeReportFrom")?.value || ""; const to = $("#financeReportTo")?.value || ""; const type = $("#financeReportType")?.value || "all"; const memberId = $("#financeReportMember")?.value || "all"; const service = $("#financeReportService")?.value || "all";
+    return state.collections.filter(accountedCollection).filter(item => !from || item.collection_date >= from).filter(item => !to || item.collection_date <= to).filter(item => type === "all" || item.collection_type === type).filter(item => memberId === "all" || item.member_id === memberId).filter(item => service === "all" || serviceLabel(item) === service);
+  }
+
+  function reportPeriodRows(records, period) {
+    const groups = new Map();
+    records.forEach(item => { const key = period === "month" ? item.collection_date.slice(0, 7) : item.collection_date.slice(0, 4); const group = groups.get(key) || { key, tithes: 0, vto: 0, offertory: 0, other: 0, total: 0 }; const amount = num(item.amount); if (item.collection_type === "Tithe") group.tithes += amount; else if (item.collection_type === "Vote of Thanks (VTO)") group.vto += amount; else if (OFFERTORY_TYPES.has(item.collection_type)) group.offertory += amount; else group.other += amount; group.total += amount; groups.set(key, group); });
+    return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
+  }
+
+  function reportResultsMarkup() {
+    const records = filteredReportCollections(); const services = serviceGivingTotals(records); const months = reportPeriodRows(records, "month"); const years = reportPeriodRows(records, "year");
+    const totalFor = type => records.filter(item => item.collection_type === type).reduce((sum, item) => sum + num(item.amount), 0);
+    const offertory = records.filter(item => OFFERTORY_TYPES.has(item.collection_type)).reduce((sum, item) => sum + num(item.amount), 0); const total = records.reduce((sum, item) => sum + num(item.amount), 0);
+    const memberGroups = new Map(); records.filter(item => item.member_id).forEach(item => { const member = relation(item, "members") || state.members.find(entry => entry.id === item.member_id); const group = memberGroups.get(item.member_id) || { name: fullName(member), tithes: 0, vto: 0, total: 0, count: 0 }; if (item.collection_type === "Tithe") group.tithes += num(item.amount); if (item.collection_type === "Vote of Thanks (VTO)") group.vto += num(item.amount); group.total += num(item.amount); group.count += 1; memberGroups.set(item.member_id, group); });
+    const members = Array.from(memberGroups.values()).sort((a, b) => b.total - a.total);
+    const periodTable = (title, rows) => `<article class="card finance-record-card"><div class="finance-card-heading"><div><p class="eyebrow">${title.toUpperCase()}</p><h3>${title}</h3></div></div><div class="table-scroll"><table class="finance-table compact"><thead><tr><th>Period</th><th>Tithes</th><th>VTO</th><th>Offertory</th><th>Other</th><th>Total giving</th></tr></thead><tbody>${rows.length ? rows.map(row => `<tr><td><strong>${esc(row.key)}</strong></td><td>${money.format(row.tithes)}</td><td>${money.format(row.vto)}</td><td>${money.format(row.offertory)}</td><td>${money.format(row.other)}</td><td class="finance-money">${money.format(row.total)}</td></tr>`).join("") : `<tr><td colspan="6"><div class="finance-empty compact"><p>No giving in this period.</p></div></td></tr>`}</tbody></table></div></article>`;
+    return `<div class="finance-summary-strip">${metric("Tithes", money.format(totalFor("Tithe")), "From individual giving transactions", "badge-cent", "blue")}${metric("VTO", money.format(totalFor("Vote of Thanks (VTO)")), "From individual giving transactions", "heart-handshake", "red")}${metric("Offertory", money.format(offertory), "All offertory types", "church", "orange")}${metric("Total Giving", money.format(total), `${records.length} accounted transaction${records.length === 1 ? "" : "s"}`, "hand-coins", "green")}</div><div class="finance-report-stack"><article class="card finance-record-card"><div class="finance-card-heading"><div><p class="eyebrow">SERVICE GIVING REPORT</p><h3>Totals by service / occasion</h3></div></div><div class="table-scroll"><table class="finance-table"><thead><tr><th>Date</th><th>Service / occasion</th><th>Members</th><th>Tithes</th><th>VTO</th><th>Offertory</th><th>Other</th><th>Total</th></tr></thead><tbody>${services.length ? services.map(row => `<tr><td>${formatDate(row.date)}</td><td><strong>${esc(row.service)}</strong><small>${row.transactions} transaction${row.transactions === 1 ? "" : "s"}</small></td><td>${row.members.size}</td><td>${money.format(row.tithes)}</td><td>${money.format(row.vto)}</td><td>${money.format(row.offertory)}</td><td>${money.format(row.other)}</td><td class="finance-money">${money.format(row.total)}</td></tr>`).join("") : `<tr><td colspan="8"><div class="finance-empty"><p>No service giving matches these filters.</p></div></td></tr>`}</tbody></table></div></article><article class="card finance-record-card"><div class="finance-card-heading"><div><p class="eyebrow">MEMBER GIVING REPORT</p><h3>Giving by member</h3></div></div><div class="table-scroll"><table class="finance-table compact"><thead><tr><th>Member</th><th>Tithes</th><th>VTO</th><th>Transactions</th><th>Total giving</th></tr></thead><tbody>${members.length ? members.map(row => `<tr><td><strong>${esc(row.name)}</strong></td><td>${money.format(row.tithes)}</td><td>${money.format(row.vto)}</td><td>${row.count}</td><td class="finance-money">${money.format(row.total)}</td></tr>`).join("") : `<tr><td colspan="5"><div class="finance-empty compact"><p>No member-linked giving matches these filters.</p></div></td></tr>`}</tbody></table></div></article>${periodTable("Monthly financial report", months)}${periodTable("Annual financial report", years)}</div>`;
+  }
+
+  function renderReportResults() { const node = $("#financeReportResults"); if (node) { node.innerHTML = reportResultsMarkup(); refreshIcons(); } }
+
   function reportsMarkup() {
-    const district=districtTotals(); const total=collectionTotal(); const expense=state.expenses.filter(paidExpense).reduce((s,i)=>s+num(i.amount),0)+state.legacyTransactions.filter(i=>i.type==="Expense").reduce((s,i)=>s+num(i.amount),0);
-    return `<div class="finance-report-actions"><button class="secondary-btn" id="financePrintReport" type="button"><i data-lucide="printer"></i> Print</button><button class="secondary-btn" id="financeExportReport" type="button"><i data-lucide="download"></i> Export collections CSV</button></div><div class="finance-summary-strip">${metric("Collection Report",money.format(total),"All accounted classified collections","hand-coins","green")}${metric("Expense Report",money.format(expense),"Paid and legacy posted expenses","receipt","red")}${metric("Net Church Position",money.format(currentChurchBalance()),"Owned funds after paid expenses","landmark","blue")}${metric("District Outstanding",money.format(district.outstanding),"Sebrepor District","building-2","orange")}</div><div class="finance-report-grid">${COLLECTION_TYPES.map(type=>{const value=collectionTotal(type);return `<article class="card"><span>${esc(type)} Report</span><strong>${money.format(value)}</strong><small>${state.collections.filter(item=>accountedCollection(item)&&item.collection_type===type).length} records</small></article>`}).join("")}<article class="card district-report"><span>District Remittance Report</span><strong>${money.format(district.remitted)} remitted</strong><small>${money.format(collectionTotal("Adult Offertory"))} Adult Offertory · ${money.format(state.collections.filter(accountedCollection).reduce((s,i)=>s+num(i.local_share),0))} local shares · ${money.format(district.due)} district shares · ${money.format(district.outstanding)} outstanding</small></article></div>${legacyLedgerMarkup()}`;
+    return `<div class="finance-report-actions"><button class="secondary-btn" id="financePrintReport" type="button"><i data-lucide="printer"></i> Print</button><button class="secondary-btn" id="financeExportReport" type="button"><i data-lucide="download"></i> Export filtered CSV</button></div>${reportFiltersMarkup()}<div id="financeReportResults"></div>${legacyLedgerMarkup()}`;
   }
 
   function legacyLedgerMarkup(){if(!state.legacyTransactions.length)return "";return `<article class="card finance-record-card finance-legacy-ledger"><div class="finance-card-heading"><div><p class="eyebrow">COMPATIBILITY</p><h3>Legacy transaction ledger</h3><p>Preserved from the original Finance module. These records affect balances but are not guessed into collection categories.</p></div></div><div class="table-scroll"><table class="finance-table"><thead><tr><th>Date</th><th>Description</th><th>Fund</th><th>Type</th><th>Amount</th></tr></thead><tbody>${state.legacyTransactions.slice().sort((a,b)=>b.transaction_date.localeCompare(a.transaction_date)).map(item=>`<tr><td>${formatDate(item.transaction_date)}</td><td>${esc(item.description)}</td><td>${esc(item.fund)}</td><td><span class="finance-status ${item.type.toLowerCase()}">${esc(item.type)}</span></td><td class="finance-money">${item.type==="Expense"?"−":"+"}${money.format(num(item.amount))}</td></tr>`).join("")}</tbody></table></div></article>`;}
@@ -328,6 +394,7 @@
     if(state.loading){content.innerHTML='<div class="finance-loading"><span></span><p>Loading secure financial records…</p></div>';refreshIcons();return;}
     content.innerHTML=state.section==="dashboard"?dashboardMarkup():["collections","tithes","vto","children","jy","adult"].includes(state.section)?collectionsMarkup():state.section==="remittances"?remittanceMarkup():state.section==="expenses"?expenseMarkup():state.section==="funds"?fundsMarkup():state.section==="reports"?reportsMarkup():state.section==="settings"?settingsMarkup():auditMarkup();
     if(state.section==="dashboard") renderGrowthChart();
+    if(state.section==="reports") renderReportResults();
     if(state.section==="settings") updateRuleTotal();
     refreshIcons();
   }
@@ -352,24 +419,27 @@
     [state.funds,state.rules,state.collections,state.expenses,state.remittances,state.transfers]=results.slice(0,6).map(result=>result.data||[]); state.audit=results[6]?.data||[]; render();
   }
 
-  function populateForms(type) {
+  function populateForms(type, record = null, preset = {}) {
     const form=type==="collection"?$("#financeCollectionForm"):type==="expense"?$("#financeExpenseForm"):null;
     if(form){const fundSelect=form.elements.fund_id;fundSelect.innerHTML=state.funds.filter(item=>item.is_active).map(item=>`<option value="${item.id}">${esc(item.name)}</option>`).join("");}
     if(type==="collection"){
-      form.elements.event_id.innerHTML='<option value="">No linked service</option>'+state.events.slice().sort((a,b)=>b.event_date.localeCompare(a.event_date)).map(item=>`<option value="${item.id}">${esc(item.title)} · ${formatDate(item.event_date)}</option>`).join("");
-      form.elements.member_id.innerHTML='<option value="">Not member-specific</option>'+state.members.slice().sort((a,b)=>fullName(a).localeCompare(fullName(b))).map(item=>`<option value="${item.id}">${esc(fullName(item))}</option>`).join("");
-      const forced=sectionTypes[state.section]; form.elements.collection_type.value=forced||"Tithe"; form.elements.collection_type.disabled=Boolean(forced);
-      form.elements.collection_date.value=todayIso(); form.elements.status.value="Pending"; form.reset(); form.elements.collection_date.value=todayIso(); form.elements.collection_type.value=forced||"Tithe"; form.elements.collection_type.disabled=Boolean(forced);
+      form.elements.event_id.innerHTML='<option value="">No linked programme</option>'+state.events.slice().sort((a,b)=>b.event_date.localeCompare(a.event_date)).map(item=>`<option value="${item.id}">${esc(item.title)} · ${formatDate(item.event_date)}</option>`).join("");
+      form.elements.member_id.innerHTML='<option value="">General collection</option>'+state.members.slice().sort((a,b)=>fullName(a).localeCompare(fullName(b))).map(item=>`<option value="${item.id}">${esc(fullName(item))}</option>`).join("");
+      form.reset(); state.editingCollectionId=record?.id||null; form.elements.collection_id.value=record?.id||"";
+      const forced=sectionTypes[state.section]; const selectedType=record?.collection_type||preset.type||forced||"Tithe"; form.elements.collection_type.value=selectedType; form.elements.collection_type.disabled=Boolean(forced&&!record);
+      form.elements.collection_date.value=record?.collection_date||todayIso(); form.elements.status.value=record?.status||"Counted"; form.elements.event_id.value=record?.event_id||""; form.elements.member_id.value=record?.member_id||preset.memberId||""; form.elements.amount.value=record?.amount||""; form.elements.collection_method.value=record?.collection_method||"Cash"; form.elements.fund_id.value=record?.fund_id||form.elements.fund_id.value; form.elements.reference_number.value=record?.reference_number||""; form.elements.occasion.value=record?.occasion||"Birthday"; form.elements.description.value=record?.description||"";
+      const savedService=record?.service_name||preset.serviceName||"Sunday Divine Service"; if(SERVICE_NAMES.includes(savedService)){form.elements.service_name.value=savedService;form.elements.custom_service_name.value="";}else{form.elements.service_name.value="Other";form.elements.custom_service_name.value=savedService;}
+      const dialog=$("#financeCollectionDialog"); dialog.querySelector(".dialog-header h3").textContent=record?"Edit giving transaction":"Record collection"; dialog.querySelector('[type="submit"]').textContent=record?"Save changes":"Save collection";
       $$('[data-verify-option]',form).forEach(option=>option.disabled=!can("finance.verify")); updateCollectionConditionalFields();
     }
     if(type==="expense"){form.reset();form.elements.expense_date.value=todayIso();$$('[data-approve-option]',form).forEach(option=>option.disabled=!can("finance.approve"));}
   }
 
-  function openForm(type) {
+  function openForm(type, options = {}) {
     if(type!=="fund"&&!can("finance.manage")) return notify("You do not have permission to manage finance records.","error");
     if(type==="fund"&&!can("finance.settings")) return notify("Finance settings permission is required.","error");
     if(type==="remittance"){$("#financeRemittanceForm").reset();$("#financeRemittanceForm").elements.remittance_date.value=todayIso();const outstanding=districtTotals().outstanding;$("#financeRemittanceForm").elements.amount.max=String(outstanding);$("#financeRemittanceCap").textContent=`Outstanding balance: ${money.format(outstanding)}`;$("#financeRemittanceDialog").showModal();}
-    if(type==="collection"){if(!state.funds.some(item=>item.is_active))return notify("Create an active fund before recording collections.","error");populateForms("collection");$("#financeCollectionDialog").showModal();}
+    if(type==="collection"){if(!state.funds.some(item=>item.is_active))return notify("Create an active fund before recording collections.","error");const record=options.recordId?state.collections.find(item=>item.id===options.recordId):null;populateForms("collection",record,options);$("#financeCollectionDialog").showModal();}
     if(type==="expense"){if(!state.funds.some(item=>item.is_active))return notify("Create an active fund before recording expenses.","error");populateForms("expense");$("#financeExpenseDialog").showModal();}
     if(type==="fund"){$("#financeFundForm").reset();$("#financeFundDialog").showModal();}
     if(type==="transfer"){const form=$("#financeTransferForm");form.reset();form.elements.transfer_date.value=todayIso();const options=state.funds.filter(item=>item.is_active).map(item=>`<option value="${item.id}">${esc(item.name)} · ${money.format(fundBalance(item).current)}</option>`).join("");form.elements.from_fund_id.innerHTML=options;form.elements.to_fund_id.innerHTML=options;if(form.elements.to_fund_id.options.length>1)form.elements.to_fund_id.selectedIndex=1;$("#financeTransferDialog").showModal();}
@@ -379,6 +449,8 @@
   function updateCollectionConditionalFields() {
     const form=$("#financeCollectionForm"); if(!form)return; const type=form.elements.collection_type.value; const amount=num(form.elements.amount.value); const activeRule=rule();
     $("#financeOccasionField").hidden=type!=="Vote of Thanks (VTO)"; form.elements.occasion.required=type==="Vote of Thanks (VTO)";
+    const memberRequired=MEMBER_GIVING_TYPES.has(type); form.elements.member_id.required=memberRequired; $("#financeMemberField").classList.toggle("required-giver",memberRequired); $("#financeMemberHint").textContent=memberRequired?"Required: select the member who made this contribution.":"Optional for general church collections.";
+    const customService=form.elements.service_name.value==="Other"; $("#financeCustomServiceField").hidden=!customService; form.elements.custom_service_name.required=customService;
     const preview=$("#financeDistributionPreview"); preview.hidden=type!=="Adult Offertory";
     if(type==="Adult Offertory") { const localShare=Math.round(amount*num(activeRule?.local_percentage)/100*100)/100; const districtShare=amount-localShare; preview.innerHTML=activeRule?`<strong>Automatic distribution</strong><div><span>Local Church — ${num(activeRule.local_percentage)}%<b>${money.format(localShare)}</b></span><span>${esc(activeRule.district_name)} — ${num(activeRule.district_percentage)}%<b>${money.format(districtShare)}</b></span></div><small>Total: ${money.format(amount)}</small>`:`<strong>No active Adult Offertory distribution rule.</strong>`; }
   }
@@ -387,9 +459,10 @@
 
   async function saveCollection(event) {
     event.preventDefault();const form=event.currentTarget;formError("#financeCollectionError");const values=Object.fromEntries(new FormData(form).entries());if(form.elements.collection_type.disabled)values.collection_type=form.elements.collection_type.value;
-    const amount=num(values.amount);if(amount<=0)return formError("#financeCollectionError","Amount must be greater than zero.");if(values.collection_type==="Adult Offertory"&&!rule())return formError("#financeCollectionError","Enable the Adult Offertory distribution rule first.");
-    const payload={...values,amount,event_id:values.event_id||null,member_id:values.member_id||null,reference_number:values.reference_number.trim()||null,occasion:values.collection_type==="Vote of Thanks (VTO)"?values.occasion:null,description:values.description.trim()};
-    const {error}=await state.client.from("finance_collections").insert(payload);if(error)return formError("#financeCollectionError",error.message);$("#financeCollectionDialog").close();notify("Collection recorded with database-verified calculations.");await load();
+    const amount=num(values.amount);const serviceName=values.service_name==="Other"?values.custom_service_name.trim():values.service_name;if(amount<=0)return formError("#financeCollectionError","Amount must be greater than zero.");if(!serviceName)return formError("#financeCollectionError","Enter the service or occasion.");if(MEMBER_GIVING_TYPES.has(values.collection_type)&&!values.member_id)return formError("#financeCollectionError","Select the member who made this Tithe or VTO contribution.");if(values.collection_type==="Adult Offertory"&&!rule())return formError("#financeCollectionError","Enable the Adult Offertory distribution rule first.");
+    const duplicate=state.collections.find(item=>item.id!==state.editingCollectionId&&item.status!=="Voided"&&item.collection_date===values.collection_date&&item.collection_type===values.collection_type&&(item.member_id||null)===(values.member_id||null)&&serviceLabel(item).toLowerCase()===serviceName.toLowerCase());if(duplicate&&!confirm("A matching giving transaction already exists for this member, date, type, and service. Save another transaction anyway?"))return;
+    const {collection_id,custom_service_name,...cleanValues}=values;const payload={...cleanValues,service_name:serviceName,amount,event_id:values.event_id||null,member_id:values.member_id||null,reference_number:values.reference_number.trim()||null,occasion:values.collection_type==="Vote of Thanks (VTO)"?values.occasion:null,description:values.description.trim()};
+    const query=state.editingCollectionId?state.client.from("finance_collections").update(payload).eq("id",state.editingCollectionId):state.client.from("finance_collections").insert(payload);const {error}=await query;if(error)return formError("#financeCollectionError",error.message);$("#financeCollectionDialog").close();notify(state.editingCollectionId?"Giving transaction updated; the audit history was preserved.":"Giving transaction recorded and service totals updated automatically.");state.editingCollectionId=null;await load();
   }
 
   async function saveExpense(event) {
@@ -415,7 +488,7 @@
   async function saveRule(event) {event.preventDefault();formError("#financeRuleError");const form=event.currentTarget;const values=Object.fromEntries(new FormData(form).entries());const total=num(values.local_percentage)+num(values.district_percentage);if(total!==100)return formError("#financeRuleError","Local Church and district percentages must total exactly 100%.");const {error}=await state.client.from("finance_distribution_rules").update({district_name:values.district_name.trim(),local_percentage:num(values.local_percentage),district_percentage:num(values.district_percentage),enabled:values.enabled==="true"}).eq("id",values.id);if(error)return formError("#financeRuleError",error.message);notify("Distribution rule updated. Existing collections retain their historical snapshots.");await load();}
 
   function csvValue(value){const text=String(value??"");return /[",\n]/.test(text)?`"${text.replaceAll('"','""')}"`:text;}
-  function exportCollections(){const rows=state.collections;const headers=["Date","Collection Type","Amount (GHS)","Method","Status","Reference","Local Share","District Share","District","Recorded By"];const body=rows.map(item=>[item.collection_date,item.collection_type,item.amount,item.collection_method,item.status,item.reference_number||"",item.local_share,item.district_share,item.district_name_snapshot||"",item.recorded_by_name]);const blob=new Blob([[headers,...body].map(row=>row.map(csvValue).join(",")).join("\n")],{type:"text/csv;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="resurrection-finance-collections.csv";link.click();URL.revokeObjectURL(link.href);}
+  function exportCollections(){const rows=state.section==="reports"?filteredReportCollections():filteredCollections();const headers=["Date","Service / Occasion","Member","Giving Type","Amount (GHS)","Method","Status","Reference","Local Share","District Share","District","Recorded By"];const body=rows.map(item=>{const member=relation(item,"members")||state.members.find(entry=>entry.id===item.member_id);return [item.collection_date,serviceLabel(item),member?fullName(member):"General collection",item.collection_type,item.amount,item.collection_method,item.status,item.reference_number||"",item.local_share,item.district_share,item.district_name_snapshot||"",item.recorded_by_name]});const blob=new Blob([[headers,...body].map(row=>row.map(csvValue).join(",")).join("\n")],{type:"text/csv;charset=utf-8"});const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download="resurrection-giving-report.csv";link.click();URL.revokeObjectURL(link.href);}
 
   function bindEvents() {
     if(state.bound)return;state.bound=true;
@@ -424,8 +497,9 @@
       const tab=event.target.closest("[data-finance-tab]");if(tab){state.section=tab.dataset.financeTab;state.page=1;render();}
       const open=event.target.closest("[data-finance-open]")?.dataset.financeOpen;if(open)openForm(open);
       const action=event.target.closest("#financePrimaryAction")?.dataset.financeAction;if(action)openForm(action);
-      const close=event.target.closest("[data-close-finance]")?.dataset.closeFinance;if(close)$("#"+close)?.close();
+      const close=event.target.closest("[data-close-finance]")?.dataset.closeFinance;if(close){$("#"+close)?.close();if(close==="financeCollectionDialog")state.editingCollectionId=null;}
       const page=event.target.closest("[data-finance-page]")?.dataset.financePage;if(page){state.page+=page==="next"?1:-1;$("#financeCollectionTable").innerHTML=collectionTableMarkup();refreshIcons();}
+      const editCollection=event.target.closest("[data-finance-edit-collection]")?.dataset.financeEditCollection;if(editCollection)openForm("collection",{recordId:editCollection});
       const count=event.target.closest("[data-finance-count]")?.dataset.financeCount;if(count)updateRecord("finance_collections",count,{status:"Counted"},"Collection marked as counted.");
       const verify=event.target.closest("[data-finance-verify]")?.dataset.financeVerify;if(verify)updateRecord("finance_collections",verify,{status:"Verified"},"Collection verified.");
       const expenseStatus=event.target.closest("[data-finance-expense-status]")?.dataset.financeExpenseStatus;if(expenseStatus){const [status,id]=expenseStatus.split(":");updateRecord("finance_expenses",id,{status},`Expense marked ${status.toLowerCase()}.`);}
@@ -433,11 +507,13 @@
       if(event.target.closest("#financeRefresh"))load();if(event.target.closest("#financePrintReport"))window.print();if(event.target.closest("#financeExportReport"))exportCollections();
     });
     document.addEventListener("input",event=>{
-      if(event.target.matches("#financeRecordSearch,#financeDateFrom,#financeDateTo,#financeStatusFilter")){state.page=1;$("#financeCollectionTable").innerHTML=collectionTableMarkup();refreshIcons();}
-      if(event.target.closest("#financeCollectionForm")&&(event.target.name==="amount"||event.target.name==="collection_type"))updateCollectionConditionalFields();
+      if(event.target.matches("#financeRecordSearch,#financeDateFrom,#financeDateTo,#financeTypeFilter,#financeMemberFilter,#financeServiceFilter,#financeStatusFilter")){state.page=1;$("#financeCollectionTable").innerHTML=collectionTableMarkup();refreshIcons();}
+      if(event.target.matches("#financeReportFrom,#financeReportTo,#financeReportType,#financeReportMember,#financeReportService"))renderReportResults();
+      if(event.target.closest("#financeCollectionForm")&&(event.target.name==="amount"||event.target.name==="collection_type"||event.target.name==="service_name"))updateCollectionConditionalFields();
       if(event.target.closest("#financeRuleForm")&&["local_percentage","district_percentage"].includes(event.target.name))updateRuleTotal();
       if(event.target.matches("#financeGrowthType,#financeGranularity,#financeComparison,#financeCustomStart,#financeCustomEnd")){if(event.target.id==="financeComparison")$("#financeCustomRange").hidden=event.target.value!=="custom";renderGrowthChart();}
     });
+    document.addEventListener("change",event=>{if(event.target.matches('#financeCollectionForm [name="event_id"]')&&event.target.value){const selected=state.events.find(item=>item.id===event.target.value);const form=$("#financeCollectionForm");if(selected&&form){form.elements.collection_date.value=selected.event_date;if(SERVICE_NAMES.includes(selected.title))form.elements.service_name.value=selected.title;else{form.elements.service_name.value="Other";form.elements.custom_service_name.value=selected.title;}updateCollectionConditionalFields();}}});
     $("#financeCollectionForm").addEventListener("submit",saveCollection);$("#financeExpenseForm").addEventListener("submit",saveExpense);$("#financeRemittanceForm").addEventListener("submit",saveRemittance);$("#financeFundForm").addEventListener("submit",saveFund);$("#financeTransferForm").addEventListener("submit",saveTransfer);
     document.addEventListener("submit",event=>{if(event.target.id==="financeRuleForm")saveRule(event);});
   }
@@ -445,7 +521,9 @@
   async function initialize(context) {state.client=context.client;state.userId=context.userId;state.permissions=context.permissions||[];state.members=context.members||[];state.events=context.events||[];state.legacyTransactions=context.legacyTransactions||[];state.initialized=true;bindEvents();if(can("finance.view"))await load();else render();}
   function syncReferenceData(members,events){state.members=members||[];state.events=events||[];}
   function openCollection(type){state.section=Object.entries(sectionTypes).find(([,value])=>value===type)?.[0]||"collections";render();openForm("collection");}
+  function openMemberGiving(memberId,type="Tithe"){state.section=type==="Vote of Thanks (VTO)"?"vto":"tithes";render();openForm("collection",{memberId,type});}
+  function getMemberGiving(memberId){return can("finance.view")?state.collections.filter(item=>item.member_id===memberId).slice().sort((a,b)=>b.collection_date.localeCompare(a.collection_date)||b.created_at.localeCompare(a.created_at)):[];}
 
   mount();
-  window.FinanceModule={initialize,load,render,syncReferenceData,openCollection,aggregateSeries,comparisonRange,getData:()=>({collections:state.collections.slice(),expenses:state.expenses.slice(),funds:state.funds.slice(),remittances:state.remittances.slice(),transfers:state.transfers.slice(),rules:state.rules.slice()})};
+  window.FinanceModule={initialize,load,render,syncReferenceData,openCollection,openMemberGiving,getMemberGiving,serviceGivingTotals,aggregateSeries,comparisonRange,getData:()=>({collections:state.collections.slice(),expenses:state.expenses.slice(),funds:state.funds.slice(),remittances:state.remittances.slice(),transfers:state.transfers.slice(),rules:state.rules.slice()})};
 })();
