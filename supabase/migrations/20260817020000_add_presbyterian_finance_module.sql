@@ -15,8 +15,8 @@ create table if not exists public.finance_funds (
 create table if not exists public.finance_distribution_rules (
   id uuid primary key default gen_random_uuid(),
   collection_type text not null unique check (collection_type in (
-    'Tithe', 'Vote of Thanks (VTO)', 'Children''s Service Offertory',
-    'Junior Youth (JY)', 'Adult Offertory'
+    'Tithe', 'Voluntary Thanks Offering (VTO)', 'Children Service Offertory',
+    'Junior Youth (JY) Offertory', 'Adult Offertory'
   )),
   local_percentage numeric(5,2) not null check (local_percentage between 0 and 100),
   district_percentage numeric(5,2) not null check (district_percentage between 0 and 100),
@@ -33,8 +33,8 @@ create table if not exists public.finance_collections (
   id uuid primary key default gen_random_uuid(),
   collection_date date not null default current_date,
   collection_type text not null check (collection_type in (
-    'Tithe', 'Vote of Thanks (VTO)', 'Children''s Service Offertory',
-    'Junior Youth (JY)', 'Adult Offertory'
+    'Tithe', 'Voluntary Thanks Offering (VTO)', 'Children Service Offertory',
+    'Junior Youth (JY) Offertory', 'Adult Offertory'
   )),
   event_id uuid references public.events(id) on delete set null,
   member_id uuid references public.members(id) on delete set null,
@@ -60,7 +60,7 @@ create table if not exists public.finance_collections (
   updated_at timestamptz not null default now(),
   constraint finance_collection_shares_check check (local_share + district_share = amount),
   constraint finance_vto_occasion_check check (
-    collection_type <> 'Vote of Thanks (VTO)' or occasion is not null
+    collection_type <> 'Voluntary Thanks Offering (VTO)' or occasion is not null
   )
 );
 
@@ -210,8 +210,8 @@ begin
   if new.collection_date > current_date then
     raise exception 'Collection date cannot be in the future.';
   end if;
-  if new.collection_type = 'Vote of Thanks (VTO)' and btrim(coalesce(new.occasion, '')) = '' then
-    raise exception 'A Vote of Thanks occasion is required.';
+  if new.collection_type = 'Voluntary Thanks Offering (VTO)' and btrim(coalesce(new.occasion, '')) = '' then
+    raise exception 'A Voluntary Thanks Offering (VTO) occasion is required.';
   end if;
 
   if tg_op = 'INSERT' then

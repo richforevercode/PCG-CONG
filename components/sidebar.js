@@ -24,20 +24,34 @@
         <button class="nav-item active" data-page="dashboard" data-requires="dashboard.view"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
         <button class="nav-item" data-page="members" data-requires="members.view"><i data-lucide="users"></i><span>Membership</span><b id="memberNavCount">0</b></button>
         <button class="nav-item" data-page="attendance" data-requires="attendance.view"><i data-lucide="clipboard-check"></i><span>Attendance</span></button>
+        <button class="nav-item" data-page="communion" data-requires="communion.view"><i data-lucide="church"></i><span>Communion</span></button>
         <div class="finance-nav-group" data-requires="finance.view">
           <button class="nav-item" data-page="finance" data-finance-section="dashboard"><i data-lucide="wallet-cards"></i><span>Finance</span></button>
           <div class="finance-subnav" aria-label="Finance navigation">
-            <button data-page="finance" data-finance-section="dashboard">Finance Dashboard</button>
-            <button data-page="finance" data-finance-section="collections">Collections</button>
-            <button data-page="finance" data-finance-section="tithes">Tithes</button>
-            <button data-page="finance" data-finance-section="vto">Vote of Thanks (VTO)</button>
-            <button data-page="finance" data-finance-section="children">Children's Service Offertory</button>
-            <button data-page="finance" data-finance-section="jy">Junior Youth (JY)</button>
+            <button data-page="finance" data-finance-section="dashboard">Overview</button>
+            <button data-page="finance" data-finance-section="tithes">Tithe</button>
+            <button data-page="finance" data-finance-section="vto">Voluntary Thanks Offering (VTO)</button>
             <button data-page="finance" data-finance-section="adult">Adult Offertory</button>
-            <button data-page="finance" data-finance-section="remittances">District Remittance</button>
+            <button data-page="finance" data-finance-section="jy">Junior Youth (JY) Offertory</button>
+            <button data-page="finance" data-finance-section="children">Children Service Offertory</button>
+            <div class="finance-harvest-nav-group">
+              <button data-page="finance" data-finance-section="miniHarvest">Day Born Mini-Harvest</button>
+              <div class="finance-harvest-subnav" aria-label="Day Born Mini-Harvest days">
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Sunday">Sunday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Monday">Monday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Tuesday">Tuesday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Wednesday">Wednesday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Thursday">Thursday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Friday">Friday</button>
+                <button data-page="finance" data-finance-section="miniHarvest" data-finance-day="Saturday">Saturday</button>
+              </div>
+            </div>
+            <button data-page="finance" data-finance-section="mainHarvest">Main Harvest</button>
+            <button data-page="finance" data-finance-section="remittances">60/40 Distribution</button>
+            <button data-page="finance" data-finance-section="reports">Financial Reports</button>
+            <button data-page="finance" data-finance-section="collections">All Collections</button>
             <button data-page="finance" data-finance-section="expenses">Expenses</button>
             <button data-page="finance" data-finance-section="funds">Funds / Accounts</button>
-            <button data-page="finance" data-finance-section="reports">Financial Reports</button>
             <button data-page="finance" data-finance-section="settings">Finance Settings</button>
             <button data-page="finance" data-finance-section="audit">Audit Trail</button>
           </div>

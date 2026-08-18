@@ -114,13 +114,26 @@ for each row execute function public.validate_generational_group_rule();
 
 insert into public.generational_groups
   (name, minimum_age, maximum_age, gender, status, description)
-values
-  ('Children Service', 0, 11, 'All', 'Active', 'Age-based classification for children.'),
-  ('Junior Youth (JY)', 12, 17, 'All', 'Active', 'Age-based classification for junior youth.'),
-  ('Young People''s Guild (YPG)', 18, 29, 'All', 'Active', 'Age-based classification for young people.'),
-  ('Young Adult Fellowship (YAF)', 30, 39, 'All', 'Active', 'Age-based classification for young adults.'),
-  ('Men''s Fellowship', 40, null, 'Male', 'Active', 'Age-based classification for adult men.'),
-  ('Women''s Fellowship', 40, null, 'Female', 'Active', 'Age-based classification for adult women.')
+select seed.name, seed.minimum_age, seed.maximum_age, seed.gender, 'Active', seed.description
+from (values
+  ('Children Service', 0, 11, 'All', 'Age-based classification for children.'),
+  ('Junior Youth (JY)', 12, 17, 'All', 'Age-based classification for junior youth.'),
+  ('Young People''s Guild (YPG)', 18, 29, 'All', 'Age-based classification for young people.'),
+  ('Young Adult Fellowship (YAF)', 30, 39, 'All', 'Age-based classification for young adults.'),
+  ('Men''s Fellowship', 40, null::integer, 'Male', 'Age-based classification for adult men.'),
+  ('Women''s Fellowship', 40, null::integer, 'Female', 'Age-based classification for adult women.')
+) as seed(name, minimum_age, maximum_age, gender, description)
+where not exists (
+  select 1
+  from public.generational_groups existing
+  where lower(existing.name) = lower(seed.name)
+    or (
+      existing.status = 'Active'
+      and (seed.maximum_age is null or existing.minimum_age <= seed.maximum_age)
+      and (existing.maximum_age is null or seed.minimum_age <= existing.maximum_age)
+      and (seed.gender = 'All' or existing.gender = 'All' or seed.gender = existing.gender)
+    )
+)
 on conflict do nothing;
 
 create or replace function public.protect_generational_group_in_use()

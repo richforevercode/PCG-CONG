@@ -12,7 +12,9 @@
       ["events.view", "View events", "See programmes and calendar entries."],
       ["events.manage", "Manage events", "Create and update church programmes."],
       ["attendance.view", "View attendance", "See service attendance records."],
-      ["attendance.manage", "Manage attendance", "Record and update service attendance."]
+      ["attendance.manage", "Manage attendance", "Record and update service attendance."],
+      ["communion.view", "View Communion", "Read Communion occasions, registers, and member history."],
+      ["communion.manage", "Manage Communion", "Create occasions and maintain Communion registers."]
     ]},
     { name: "Finance", items: [
       ["finance.view", "View finance", "Read collections, balances, expenses, and reports."],

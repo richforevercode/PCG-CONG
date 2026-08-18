@@ -1,0 +1,67 @@
+.communion-message { margin-bottom: 16px; padding: 12px 15px; color: #9b1c1c; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px; }
+.communion-loading { display: grid; min-height: 300px; place-items: center; align-content: center; gap: 12px; color: #667085; }
+.communion-loading svg { animation: communionSpin .8s linear infinite; }
+@keyframes communionSpin { to { transform: rotate(360deg); } }
+
+.communion-stat-grid, .communion-register-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.communion-register-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.communion-metric { --communion-tone: var(--blue-800); display: flex; min-width: 0; min-height: 124px; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px; background: #fff; border: 1px solid var(--line); border-top: 3px solid var(--communion-tone); border-radius: 7px; box-shadow: 0 1px 2px rgba(16,24,40,.03); }
+.communion-metric.green { --communion-tone: #087a38; }.communion-metric.red { --communion-tone: #d80011; }.communion-metric.orange { --communion-tone: #b54708; }
+.communion-metric > div { min-width: 0; }.communion-metric span { display: block; color: #667085; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.communion-metric strong { display: block; margin: 10px 0 5px; overflow-wrap: anywhere; color: #101828; font: 700 21px/1.05 "Source Serif 4", serif; }
+.communion-metric small { display: block; color: #98a2b3; font-size: 10px; line-height: 1.35; }
+.communion-metric > svg { flex: 0 0 auto; width: 28px; height: 28px; padding: 8px; color: var(--communion-tone); background: color-mix(in srgb, var(--communion-tone) 9%, #fff); border-radius: 6px; }
+
+.communion-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, .7fr); gap: 20px; margin-bottom: 20px; }
+.communion-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 21px 22px 14px; }
+.communion-card-heading h3 { margin: 0; font-size: 18px; }.communion-card-heading p:not(.eyebrow) { margin: 5px 0 0; color: #667085; font-size: 11px; }
+.communion-direction { display: inline-flex; align-items: center; gap: 5px; padding: 5px 9px; color: #475467; background: #f2f4f7; border-radius: 99px; font-size: 10px; font-weight: 700; }
+.communion-direction.increasing { color: #067647; background: #ecfdf3; }.communion-direction.decreasing { color: #b42318; background: #fef3f2; }.communion-direction svg { width: 13px; }
+.communion-trend { display: grid; grid-template-columns: repeat(12, minmax(38px, 1fr)); min-height: 250px; align-items: end; gap: 10px; padding: 18px 22px 22px; overflow-x: auto; }
+.communion-trend > div:not(.communion-empty) { display: grid; min-width: 38px; height: 205px; grid-template-rows: 22px 1fr 28px; gap: 5px; text-align: center; }
+.communion-trend strong { color: #344054; font-size: 10px; }.communion-trend span { display: flex; align-items: flex-end; justify-content: center; background: #f2f4f7; border-radius: 4px 4px 2px 2px; }
+.communion-trend span i { width: 55%; min-height: 2px; background: #087a38; border-radius: 4px 4px 0 0; }.communion-trend small { color: #667085; font-size: 8px; line-height: 1.2; }
+.communion-principle-card { padding: 22px; }.communion-principle-card h3 { margin: 5px 0 10px; font-size: 19px; }.communion-principle-card p { color: #667085; font-size: 11px; line-height: 1.55; }
+.communion-principle-card ul { display: grid; gap: 9px; margin: 18px 0 0; padding: 15px 15px 15px 30px; color: #344054; background: #f8fafc; border-radius: 6px; font-size: 10px; }
+
+.communion-record-card { overflow: hidden; }.communion-table { width: 100%; min-width: 920px; border-collapse: collapse; }
+.communion-roster-card { margin-bottom: 20px; overflow: hidden; }
+.communion-roster-table { min-width: 1080px; }
+.communion-table th, .communion-table td { padding: 12px 14px; border-bottom: 1px solid #e4e7ec; text-align: left; font-size: 11px; vertical-align: middle; }
+.communion-table th { color: #667085; background: #f8fafc; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+.communion-table td > small, .communion-table td > strong { display: block; }.communion-table td > small { margin-top: 3px; color: #98a2b3; }
+.communion-link { padding: 0; color: var(--blue-800); background: transparent; font-weight: 700; text-align: left; }
+.communion-empty { display: grid; min-height: 130px; place-items: center; align-content: center; gap: 8px; color: #98a2b3; text-align: center; }.communion-empty.compact { min-height: 70px; }.communion-empty p { margin: 0; }
+
+.communion-back { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 14px; padding: 7px 0; color: var(--blue-800); background: transparent; font-size: 11px; font-weight: 700; }.communion-back svg { width: 15px; }
+.communion-register-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 22px; background: #fff; border: 1px solid var(--line); border-radius: 7px; }
+.communion-register-heading h2 { margin: 3px 0 6px; font-size: 23px; }.communion-register-heading p:not(.eyebrow) { margin: 0; color: #667085; font-size: 11px; }.communion-register-heading > div:last-child { display: flex; gap: 8px; }
+.communion-group-breakdown { display: flex; align-items: center; gap: 8px; margin: -4px 0 20px; overflow-x: auto; }.communion-group-breakdown > strong { flex: 0 0 auto; color: #475467; font-size: 10px; text-transform: uppercase; }
+.communion-group-breakdown span { flex: 0 0 auto; padding: 6px 9px; color: #344054; background: #fff; border: 1px solid var(--line); border-radius: 99px; font-size: 9px; }.communion-group-breakdown b { color: var(--blue-800); }
+.communion-register-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.communion-register-toolbar label, .communion-roster-toolbar label { position: relative; min-width: min(420px, 100%); }.communion-register-toolbar svg, .communion-roster-toolbar label > svg { position: absolute; top: 11px; left: 11px; width: 16px; color: #98a2b3; }.communion-register-toolbar input, .communion-roster-toolbar input { width: 100%; min-height: 38px; padding-left: 36px; }.communion-register-toolbar > span, .communion-roster-toolbar > span { color: #667085; font-size: 10px; }
+.communion-roster-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.communion-eligibility-badge { display: inline-flex; max-width: 280px; align-items: center; gap: 5px; font-size: 9px; line-height: 1.25; }.communion-eligibility-badge svg { flex: 0 0 auto; width: 13px; }.communion-eligibility-badge.eligible { color: #067647; font-weight: 700; }.communion-eligibility-badge.ineligible { color: #b42318; }
+.communion-not-recorded { color: #98a2b3; font-size: 9px; }.communion-record-action { min-height: 32px; padding: 5px 9px; font-size: 9px; white-space: nowrap; }.communion-record-action svg { width: 13px; }
+.communion-status, .communion-partook { display: inline-flex; align-items: center; gap: 4px; padding: 4px 7px; border-radius: 99px; font-size: 9px; font-weight: 700; white-space: nowrap; }
+.communion-status.communicant, .communion-partook.yes { color: #067647; background: #ecfdf3; }.communion-status.noncommunicant, .communion-status.unknown, .communion-partook.no { color: #475467; background: #f2f4f7; }.communion-partook svg { width: 11px; }
+
+.communion-dialog { width: min(760px, calc(100vw - 28px)); }.communion-dialog .dialog-body { max-height: 68vh; }
+.communion-form-error { margin: 0; padding: 10px 12px; color: #b42318; background: #fef3f2; border-radius: 5px; font-size: 11px; }
+.communion-member-picker { display: grid; gap: 8px; }.communion-member-results { display: grid; max-height: 250px; overflow-y: auto; border: 1px solid var(--line); border-radius: 6px; }
+.communion-member-results > button { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; color: inherit; background: #fff; border-bottom: 1px solid var(--line); text-align: left; }.communion-member-results > button:last-child { border-bottom: 0; }.communion-member-results > button:not(:disabled):hover { background: var(--blue-50); }
+.communion-member-results button:disabled { cursor: not-allowed; opacity: .68; }.communion-member-results span, .communion-member-results strong, .communion-member-results small { display: block; }.communion-member-results small { margin-top: 2px; color: #667085; font-size: 9px; }
+.communion-member-results em { max-width: 46%; color: #667085; font-size: 8px; font-style: normal; text-align: right; }.communion-member-results em.eligible { color: #067647; font-weight: 700; }
+.communion-selected-member { display: flex; align-items: center; justify-content: space-between; padding: 11px 12px; color: #067647; background: #ecfdf3; border: 1px solid #a6f4c5; border-radius: 6px; }.communion-selected-member span { display: grid; grid-template-columns: 20px 1fr; align-items: center; }.communion-selected-member svg { grid-row: 1/3; width: 16px; }.communion-selected-member small { color: #667085; font-size: 9px; }.communion-selected-member button { color: var(--blue-800); background: transparent; font-size: 9px; font-weight: 700; }
+.communion-visitor-fields { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }.communion-eligibility-preview { display: flex; align-items: center; gap: 10px; padding: 11px 12px; color: #475467; background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; }.communion-eligibility-preview.eligible { color: #067647; background: #ecfdf3; border-color: #a6f4c5; }.communion-eligibility-preview.ineligible { color: #b42318; background: #fef3f2; border-color: #fecdca; }.communion-eligibility-preview svg { flex: 0 0 auto; width: 18px; }.communion-eligibility-preview strong, .communion-eligibility-preview small { display: block; }.communion-eligibility-preview small { margin-top: 2px; color: #667085; font-size: 9px; }
+.communion-partook-field { display: flex !important; grid-template-columns: auto 1fr; align-items: center; gap: 10px !important; padding: 12px; background: var(--blue-50); border: 1px solid var(--blue-100); border-radius: 6px; }.communion-partook-field input { width: 18px; height: 18px; }.communion-partook-field strong, .communion-partook-field small { display: block; }.communion-partook-field small { margin-top: 2px; color: #667085; font-size: 9px; }
+
+.member-communion-section { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }.member-communion-heading h4 { margin: 3px 0 4px; font-size: 17px; }.member-communion-heading p:not(.eyebrow) { margin: 0; color: #667085; font-size: 10px; }
+.member-communion-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }.member-communion-summary > div { padding: 12px; background: #f8fafc; border-radius: 6px; }.member-communion-summary span { display: block; color: #667085; font-size: 9px; text-transform: uppercase; }.member-communion-summary strong { display: block; margin-top: 5px; color: #101828; font-size: 15px; }
+.member-communion-table { width: 100%; min-width: 620px; border-collapse: collapse; }.member-communion-table th, .member-communion-table td { padding: 10px 12px; border-bottom: 1px solid #e4e7ec; text-align: left; font-size: 10px; }.member-communion-table th { color: #667085; background: #f8fafc; font-size: 9px; text-transform: uppercase; }
+
+@media (max-width: 1180px) { .communion-register-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .communion-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.communion-dashboard-grid { grid-template-columns: 1fr; }.communion-register-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }.communion-register-heading { flex-direction: column; }.communion-register-heading > div:last-child { width: 100%; }.communion-register-heading button { flex: 1; }.communion-visitor-fields { grid-template-columns: 1fr 1fr; }.communion-visitor-fields label:first-child { grid-column: 1/-1; } }
+@media (max-width: 580px) { .communion-heading { align-items: stretch; }.communion-heading button { width: 100%; }.communion-stat-grid, .communion-register-metrics { grid-template-columns: 1fr; }.communion-register-heading > div:last-child { flex-direction: column; }.communion-register-toolbar, .communion-roster-toolbar { align-items: stretch; flex-direction: column; }.communion-register-toolbar label, .communion-roster-toolbar label { min-width: 0; }.communion-visitor-fields { grid-template-columns: 1fr; }.communion-visitor-fields label:first-child { grid-column: auto; }.member-communion-summary { grid-template-columns: 1fr; }.communion-card-heading { flex-direction: column; } }
+
+@media print { .communion-heading button, .communion-back, .communion-register-heading > div:last-child, .communion-table .row-actions, .communion-register-toolbar { display: none !important; } }

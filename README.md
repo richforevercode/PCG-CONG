@@ -30,7 +30,8 @@ The included Row Level Security policies check each active user's assigned role 
 - Daily, weekly, monthly, category, and occasion attendance growth reports with increase/decrease indicators
 - Searchable member directory with add, edit, delete, filter, and CSV export
 - Configurable age- and gender-based generational groups with automatic member classification
-- Database-backed Presbyterian finance module with member-linked Tithes and VTO, automatic service totals, giving history on authorized member profiles, offertory, expenses, funds, filtered reports, and audit history
+- Database-backed Presbyterian finance module with member-linked Tithes and Voluntary Thanks Offering (VTO), Sunday-through-Saturday Day Born Mini-Harvest and separate Main Harvest tracking with distinct Actual Collection, Pledge, Pledge Redeemed, and derived Outstanding Pledge metrics, automatic service totals, giving history on authorized member profiles, offertory, expenses, funds, filtered reports, and audit history
+- Dedicated Communion module with separate Communion occasions and registers, adult communicant eligibility, eligible visitor/non-member participation, database-enforced Children Service and Junior Youth (JY) exclusions, occasion statistics and trends, and explicit Communion history on authorized member profiles
 - Configurable Adult Offertory distribution with historical calculation snapshots and concurrency-safe Sebrepor District remittance tracking
 - Daily, weekly, monthly, quarterly, yearly, collection-type, and comparable-period financial growth analytics
 - Event calendar and programme scheduling

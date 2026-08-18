@@ -31,10 +31,9 @@ alter table public.finance_collections
 
 alter table public.finance_collections
   add constraint finance_collections_collection_type_check check (collection_type in (
-    'Tithe', 'Vote of Thanks (VTO)', 'Sunday Offertory',
-    'Children''s Service Offertory', 'Junior Youth Offertory',
-    'Thanksgiving', 'Donation', 'Other',
-    'Junior Youth (JY)', 'Adult Offertory'
+    'Tithe', 'Voluntary Thanks Offering (VTO)', 'Sunday Offertory',
+    'Children Service Offertory', 'Junior Youth (JY) Offertory',
+    'Thanksgiving', 'Donation', 'Other', 'Adult Offertory'
   ));
 
 create index if not exists finance_collections_service_date_idx
@@ -71,11 +70,11 @@ begin
     raise exception 'A service or occasion is required.';
   end if;
 
-  member_required := new.collection_type in ('Tithe', 'Vote of Thanks (VTO)');
+  member_required := new.collection_type in ('Tithe', 'Voluntary Thanks Offering (VTO)');
 
   if tg_op = 'UPDATE' then
     legacy_status_only_update := old.member_id is null
-      and old.collection_type in ('Tithe', 'Vote of Thanks (VTO)')
+      and old.collection_type in ('Tithe', 'Voluntary Thanks Offering (VTO)')
       and old.collection_type is not distinct from new.collection_type
       and old.member_id is not distinct from new.member_id
       and old.amount is not distinct from new.amount
@@ -86,7 +85,7 @@ begin
 
   if member_required and new.member_id is null
      and (tg_op = 'INSERT' or not legacy_status_only_update) then
-    raise exception 'Select the member who gave this Tithe or VTO.';
+    raise exception 'Select the member who gave this Tithe or Voluntary Thanks Offering (VTO).';
   end if;
 
   return new;
@@ -108,14 +107,14 @@ select
   count(*)::integer as transaction_count,
   count(distinct collection.member_id)::integer as member_count,
   coalesce(sum(collection.amount) filter (where collection.collection_type = 'Tithe'), 0)::numeric(14,2) as tithe_total,
-  coalesce(sum(collection.amount) filter (where collection.collection_type = 'Vote of Thanks (VTO)'), 0)::numeric(14,2) as vto_total,
+  coalesce(sum(collection.amount) filter (where collection.collection_type = 'Voluntary Thanks Offering (VTO)'), 0)::numeric(14,2) as vto_total,
   coalesce(sum(collection.amount) filter (where collection.collection_type in (
-    'Sunday Offertory', 'Adult Offertory', 'Children''s Service Offertory',
-    'Junior Youth Offertory', 'Junior Youth (JY)'
+    'Sunday Offertory', 'Adult Offertory', 'Children Service Offertory',
+    'Junior Youth (JY) Offertory'
   )), 0)::numeric(14,2) as offertory_total,
   coalesce(sum(collection.amount) filter (where collection.collection_type not in (
-    'Tithe', 'Vote of Thanks (VTO)', 'Sunday Offertory', 'Adult Offertory',
-    'Children''s Service Offertory', 'Junior Youth Offertory', 'Junior Youth (JY)'
+    'Tithe', 'Voluntary Thanks Offering (VTO)', 'Sunday Offertory', 'Adult Offertory',
+    'Children Service Offertory', 'Junior Youth (JY) Offertory'
   )), 0)::numeric(14,2) as other_giving_total,
   coalesce(sum(collection.amount), 0)::numeric(14,2) as total_giving
 from public.finance_collections collection

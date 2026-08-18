@@ -29,6 +29,7 @@
     userManagementInitialized: false,
     generationalGroupsInitialized: false,
     attendanceInitialized: false,
+    communionInitialized: false,
     financeInitialized: false
   };
 
@@ -61,6 +62,7 @@
     dashboard: "dashboard.view",
     members: "members.view",
     attendance: "attendance.view",
+    communion: "communion.view",
     finance: "finance.view",
     events: "events.view",
     reports: "reports.view",
@@ -153,7 +155,7 @@
     $$('[data-action="add-transaction"]').forEach(element => { element.hidden = !hasPermission("finance.manage"); });
     $$('[data-action="add-event"]').forEach(element => { element.hidden = !hasPermission("events.manage"); });
     $$('[data-action="add-attendance"]').forEach(element => { element.hidden = !hasPermission("attendance.manage"); });
-    $("#quickAddBtn").hidden = !["members.manage", "attendance.manage", "finance.manage", "events.manage"].some(hasPermission);
+    $("#quickAddBtn").hidden = !["members.manage", "attendance.manage", "communion.manage", "finance.manage", "events.manage"].some(hasPermission);
     const settingsProfileAction = $('[data-profile-action="settings"]');
     if (settingsProfileAction) settingsProfileAction.hidden = !hasPermission("settings.manage");
   }
@@ -279,6 +281,11 @@
     window.FinanceModule?.render();
   }
 
+  function renderCommunion() {
+    window.CommunionModule?.syncReferenceData(state.members, state.events);
+    window.CommunionModule?.render();
+  }
+
   function renderEvents() {
     const type = $("#eventTypeFilter")?.value || "all";
     const colors = { Worship: "#0a3995", Meeting: "#b54708", Outreach: "#087a38", Fellowship: "#d80011" };
@@ -357,6 +364,7 @@
   function renderAll() {
     renderDashboard();
     renderMembers();
+    renderCommunion();
     renderFinance();
     renderEvents();
     renderReports();
@@ -380,6 +388,7 @@
       <label class="full">Actual fellowship / department (optional)<input name="group_name" value="${esc(member.group_name)}" placeholder="e.g. Choir or welfare team" /><small class="field-note">This records actual participation and is separate from the automatic age-based group.</small></label>
       <label>Role<select name="role">${options(["Member", "Leader", "Elder", "Deacon", "Teacher"], member.role || "Member")}</select></label>
       <label>Status<select name="status">${options(["Active", "Visitor", "Inactive"], member.status || "Active")}</select></label>
+      <label>Communicant status<select name="communicant_status">${options(["Non-Communicant", "Communicant"], member.communicant_status || "Non-Communicant")}</select><small class="field-note">Eligibility is separate from actual Communion participation.</small></label>
       <label>Date joined<input name="joined_at" type="date" value="${esc(member.joined_at || todayIso())}" /></label>`;
   }
 
@@ -392,7 +401,7 @@
     const total = accounted.reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const monthly = accounted.filter(item => item.collection_date?.startsWith(monthKey())).reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const givingMoney = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS", minimumFractionDigits: 2 });
-    return `<section class="member-giving-section"><div class="member-giving-heading"><div><p class="eyebrow">PRIVATE FINANCIAL RECORD</p><h4>Giving / Financial History</h4><p>Visible only to users with finance access.</p></div>${hasPermission("finance.manage") ? `<div class="member-giving-actions"><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Tithe"><i data-lucide="plus"></i> Tithe</button><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Vote of Thanks (VTO)"><i data-lucide="plus"></i> VTO</button></div>` : ""}</div><div class="member-giving-summary"><div><span>Total Tithes</span><strong>${givingMoney.format(totalFor("Tithe"))}</strong></div><div><span>Total VTO</span><strong>${givingMoney.format(totalFor("Vote of Thanks (VTO)"))}</strong></div><div><span>Total Giving</span><strong>${givingMoney.format(total)}</strong></div><div><span>Transactions</span><strong>${accounted.length}</strong></div><div><span>This Month</span><strong>${givingMoney.format(monthly)}</strong></div></div><div class="member-giving-filters"><label>From<input type="date" data-member-giving-from value="${esc(from)}"></label><label>To<input type="date" data-member-giving-to value="${esc(to)}"></label></div><div class="table-scroll"><table class="member-giving-table"><thead><tr><th>Date</th><th>Occasion / Service</th><th>Type</th><th>Status</th><th>Amount</th></tr></thead><tbody>${records.length ? records.map(item => { const event = Array.isArray(item.events) ? item.events[0] : item.events; return `<tr><td>${esc(formatMemberDate(item.collection_date))}</td><td>${esc(item.service_name || event?.title || "Unspecified service")}</td><td>${esc(item.collection_type)}</td><td><span class="finance-status ${esc(item.status.toLowerCase())}">${esc(item.status)}</span></td><td>${givingMoney.format(Number(item.amount || 0))}</td></tr>`; }).join("") : `<tr><td colspan="5"><div class="member-giving-empty">No giving transactions match this date range.</div></td></tr>`}</tbody></table></div></section>`;
+    return `<section class="member-giving-section"><div class="member-giving-heading"><div><p class="eyebrow">PRIVATE FINANCIAL RECORD</p><h4>Giving / Financial History</h4><p>Visible only to users with finance access.</p></div>${hasPermission("finance.manage") ? `<div class="member-giving-actions"><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Tithe"><i data-lucide="plus"></i> Tithe</button><button class="secondary-btn" type="button" data-record-member-giving="${memberId}" data-giving-type="Voluntary Thanks Offering (VTO)"><i data-lucide="plus"></i> Voluntary Thanks Offering (VTO)</button></div>` : ""}</div><div class="member-giving-summary"><div><span>Total Tithe</span><strong>${givingMoney.format(totalFor("Tithe"))}</strong></div><div><span>Total Voluntary Thanks Offering (VTO)</span><strong>${givingMoney.format(totalFor("Voluntary Thanks Offering (VTO)"))}</strong></div><div><span>Total Giving</span><strong>${givingMoney.format(total)}</strong></div><div><span>Transactions</span><strong>${accounted.length}</strong></div><div><span>This Month</span><strong>${givingMoney.format(monthly)}</strong></div></div><div class="member-giving-filters"><label>From<input type="date" data-member-giving-from value="${esc(from)}"></label><label>To<input type="date" data-member-giving-to value="${esc(to)}"></label></div><div class="table-scroll"><table class="member-giving-table"><thead><tr><th>Date</th><th>Occasion / Service</th><th>Type</th><th>Status</th><th>Amount</th></tr></thead><tbody>${records.length ? records.map(item => { const event = Array.isArray(item.events) ? item.events[0] : item.events; return `<tr><td>${esc(formatMemberDate(item.collection_date))}</td><td>${esc(item.service_name || event?.title || "Unspecified service")}</td><td>${esc(item.collection_type)}</td><td><span class="finance-status ${esc(item.status.toLowerCase())}">${esc(item.status)}</span></td><td>${givingMoney.format(Number(item.amount || 0))}</td></tr>`; }).join("") : `<tr><td colspan="5"><div class="member-giving-empty">No giving transactions match this date range.</div></td></tr>`}</tbody></table></div></section>`;
   }
 
   function renderMemberGivingSection() {
@@ -414,11 +423,12 @@
       <div class="member-profile-field"><span>Date of birth</span><strong>${esc(formatMemberDate(member.date_of_birth))}</strong></div>
       <div class="member-profile-field"><span>Current age</span><strong>${classification.age === null ? "Not available" : `${classification.age} years`}</strong></div>
       <div class="member-profile-field"><span>Gender</span><strong>${esc(member.gender || "Not specified")}</strong></div>
+      <div class="member-profile-field"><span>Communicant status</span><strong>${esc(member.communicant_status || "Non-Communicant")}</strong></div>
       <div class="member-profile-field"><span>Date joined</span><strong>${esc(formatMemberDate(member.joined_at))}</strong></div>
       <div class="member-profile-field classification"><span>Age-based group</span><strong>${esc(presentation.label)}</strong><small><i data-lucide="sparkles"></i>Automatically determined from date of birth and the church's active rules</small></div>
       <div class="member-profile-field"><span>Actual fellowship / department</span><strong>${esc(member.group_name || "None recorded")}</strong></div>
       <div class="member-profile-field"><span>Contact</span><strong>${esc(member.phone || member.email || "None recorded")}</strong></div>
-    </div>${memberGivingMarkup(member.id)}`;
+    </div>${window.CommunionModule?.memberHistoryMarkup(member.id) || ""}${memberGivingMarkup(member.id)}`;
     $("#editMemberFromProfile").hidden = !hasPermission("members.manage");
     $("#memberProfileDialog").showModal();
     refreshIcons();
@@ -468,6 +478,8 @@
         if (ageResult.code === "missing-date") throw new Error("Date of birth is required.");
         if (ageResult.code === "invalid-date") throw new Error("Enter a valid date of birth.");
         if (ageResult.code === "future-date") throw new Error("Date of birth cannot be in the future.");
+        const communionEligibility = window.CommunionModule?.memberEligibility({ ...values, id: state.editingId || "new" }, todayIso());
+        if (values.communicant_status === "Communicant" && communionEligibility && !communionEligibility.adultGroupEligible) throw new Error(communionEligibility.reason);
         if (state.editingId) {
           const record = { ...values, id: state.editingId };
           await persistUpdate("members", record);
@@ -643,6 +655,16 @@
         });
         state.attendanceInitialized = true;
       }
+      if (!state.communionInitialized && window.CommunionModule && hasPermission("communion.view")) {
+        await window.CommunionModule.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions,
+          members: state.members,
+          events: state.events
+        });
+        state.communionInitialized = true;
+      }
       if (!state.financeInitialized && window.FinanceModule) {
         await window.FinanceModule.initialize({
           client,
@@ -761,6 +783,7 @@
     });
     $("#quickAddBtn").addEventListener("click", () => {
       if (state.page === "attendance") return window.AttendanceModule?.openTakeAttendance();
+      if (state.page === "communion") return window.CommunionModule?.openOccasion();
       if (state.page === "finance") return window.FinanceModule?.openCollection();
       openDialog(state.page === "finance" ? "transaction" : state.page === "events" ? "event" : "member");
     });
