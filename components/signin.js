@@ -18,16 +18,27 @@
   };
 
   const dashboardUrl = () => new URL("index.html", window.location.href).href;
+  const memberPortalUrl = () => new URL("member-portal.html", window.location.href).href;
+  const roleOf = profile => Array.isArray(profile?.app_roles) ? profile.app_roles[0] : profile?.app_roles;
 
   async function verifyAccess(userId) {
     const { data, error } = await client
       .from("user_profiles")
-      .select("status,app_roles(name,permissions)")
+      .select("status,member_id,app_roles(name,permissions)")
       .eq("id", userId)
       .single();
     if (error) throw new Error("Your administrator profile is not ready. Ask the Super Administrator to check your account.");
     if (data.status !== "active") throw new Error("This account is inactive. Contact a Super Administrator for access.");
     return data;
+  }
+
+  function routeFor(profile) {
+    const role = roleOf(profile);
+    if (role?.name === "Member") {
+      if (!profile.member_id) throw new Error("This Member account is not linked to a church member record. Ask an administrator to link it.");
+      return memberPortalUrl();
+    }
+    return dashboardUrl();
   }
 
   async function initialize() {
@@ -40,8 +51,8 @@
     const { data } = await client.auth.getSession();
     if (data.session?.user) {
       try {
-        await verifyAccess(data.session.user.id);
-        location.replace(dashboardUrl());
+        const profile = await verifyAccess(data.session.user.id);
+        location.replace(routeFor(profile));
       } catch (_) {
         await client.auth.signOut();
       }
@@ -59,8 +70,8 @@
     try {
       const { data, error } = await client.auth.signInWithPassword({ email: values.email.trim(), password: values.password });
       if (error) throw error;
-      await verifyAccess(data.user.id);
-      location.replace(dashboardUrl());
+      const profile = await verifyAccess(data.user.id);
+      location.replace(routeFor(profile));
     } catch (error) {
       await client.auth.signOut();
       const message = /invalid login credentials/i.test(error.message)
@@ -83,4 +94,3 @@
 
   initialize();
 })();
-

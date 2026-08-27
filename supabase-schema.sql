@@ -13,7 +13,7 @@ create table if not exists public.members (
   email text,
   group_name text,
   role text not null default 'Member',
-  status text not null default 'Active' check (status in ('Active', 'Visitor', 'Inactive')),
+  status text not null default 'Active' check (status in ('Active', 'Visitor', 'Inactive', 'Transferred In', 'Transferred Out', 'Deceased')),
   joined_at date not null default current_date,
   created_at timestamptz not null default now()
 );

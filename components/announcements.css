@@ -1,0 +1,25 @@
+.announcement-admin-card { overflow: hidden; }
+.announcement-toolbar-note { display: block; color: var(--muted); margin-top: .2rem; }
+.announcement-admin-list { display: grid; }
+.announcement-admin-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; padding: 1.25rem 1.4rem; border-top: 1px solid var(--line); }
+.announcement-admin-item:first-child { border-top: 0; }
+.announcement-admin-copy { min-width: 0; }
+.announcement-admin-copy h3 { margin: .65rem 0 .35rem; }
+.announcement-admin-copy p { color: #475467; margin: 0 0 .65rem; white-space: pre-line; }
+.announcement-admin-copy > small { color: var(--muted); }
+.announcement-admin-meta { display: flex; align-items: center; flex-wrap: wrap; gap: .55rem; color: var(--muted); font-size: .78rem; }
+.announcement-priority { border-radius: 999px; padding: .22rem .55rem; background: #f2f4f7; color: #344054; font-weight: 700; }
+.announcement-priority.important { background: #fff4e5; color: #9a4d00; }
+.announcement-priority.urgent { background: #fee4e2; color: #b42318; }
+@media (max-width: 640px) { .announcement-admin-item { align-items: stretch; flex-direction: column; } .announcement-admin-item .row-actions { align-self: flex-end; } }
+.member-request-card { margin-top: 1.25rem; overflow: hidden; }
+.member-request-card .card-heading { padding: 1.25rem 1.4rem; }
+.member-request-card .card-heading p:last-child { color: var(--muted); margin: .3rem 0 0; }
+.member-request-list { display: grid; }
+.member-request-item { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; padding: 1.1rem 1.4rem; border-top: 1px solid var(--line); }
+.member-request-item p { margin: .4rem 0; }
+.member-request-item small { color: var(--muted); display: block; }
+.member-request-meta { display: flex; flex-wrap: wrap; gap: .65rem; color: var(--muted); font-size: .82rem; }
+.member-request-meta strong { color: var(--ink); }
+.member-request-actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+@media (max-width: 720px) { .member-request-item { flex-direction: column; } .member-request-actions { align-self: stretch; flex-wrap: wrap; } }

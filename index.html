@@ -14,15 +14,16 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=20260827-1" />
   <link rel="stylesheet" href="components/sidebar.css" />
   <link rel="stylesheet" href="components/dashboard.css" />
-  <link rel="stylesheet" href="components/generational-groups.css" />
+  <link rel="stylesheet" href="components/generational-groups.css?v=20260827-1" />
   <link rel="stylesheet" href="components/attendance.css" />
-  <link rel="stylesheet" href="components/communion.css" />
+  <link rel="stylesheet" href="components/communion.css?v=20260827-1" />
   <link rel="stylesheet" href="components/finance.css" />
   <link rel="stylesheet" href="components/profile.css" />
   <link rel="stylesheet" href="components/user-management.css" />
+  <link rel="stylesheet" href="components/announcements.css?v=20260820-1" />
 </head>
 
 <body>
@@ -155,6 +156,9 @@
                   <option>Active</option>
                   <option>Visitor</option>
                   <option>Inactive</option>
+                  <option>Transferred In</option>
+                  <option>Transferred Out</option>
+                  <option>Deceased</option>
                 </select>
                 <button class="secondary-btn" id="exportMembers"><i data-lucide="download"></i> Export</button>
               </div>
@@ -179,6 +183,7 @@
                   class="active">1</button><button disabled><i data-lucide="chevron-right"></i></button></div>
             </div>
           </article>
+          <div id="memberProfileRequestsRoot" data-requires="members.manage"></div>
         </section>
 
         <section class="page" id="page-attendance" data-page-title="Attendance">
@@ -232,6 +237,10 @@
           </div>
         </section>
 
+        <section class="page" id="page-announcements" data-page-title="Announcements">
+          <div id="announcementsModuleRoot"></div>
+        </section>
+
         <section class="page" id="page-reports" data-page-title="Reports">
           <div class="page-heading">
             <div>
@@ -279,10 +288,11 @@
             <div>
               <p class="breadcrumb">Home <i data-lucide="chevron-right"></i> Administration</p>
               <h2>Users & roles</h2>
-              <p>Create administrator accounts and control what each role can access.</p>
+              <p>Create administrator and member accounts, link Member access, and control what each role can access.
+              </p>
             </div>
             <button class="primary-btn" id="addUserBtn" data-requires="users.manage"><i data-lucide="user-plus"></i> Add
-              administrator</button>
+              account</button>
           </div>
 
           <div class="user-metrics" id="userMetrics"></div>
@@ -291,7 +301,7 @@
             <article class="card table-card users-card">
               <div class="table-toolbar">
                 <label class="inline-search"><i data-lucide="search"></i><input id="userSearch" type="search"
-                    placeholder="Search administrators..." /></label>
+                    placeholder="Search accounts..." /></label>
                 <div class="toolbar-actions">
                   <select id="userRoleFilter" aria-label="Filter users by role">
                     <option value="all">All roles</option>
@@ -307,7 +317,7 @@
                 <table>
                   <thead>
                     <tr>
-                      <th>Administrator</th>
+                      <th>Account</th>
                       <th>Role</th>
                       <th>Status</th>
                       <th>Added</th>
@@ -317,7 +327,7 @@
                   <tbody id="usersTable"></tbody>
                 </table>
               </div>
-              <div class="table-footer"><span id="userTableCount">Loading administrators...</span></div>
+              <div class="table-footer"><span id="userTableCount">Loading accounts...</span></div>
             </article>
 
             <aside class="card roles-card">
@@ -462,6 +472,83 @@
     </form>
   </dialog>
 
+  <dialog id="announcementDialog" class="management-dialog" aria-labelledby="announcementDialogTitle">
+    <form id="announcementForm">
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">MEMBER COMMUNICATION</p>
+          <h3 id="announcementDialogTitle">Create announcement</h3>
+        </div>
+        <button class="icon-btn" type="button" data-close-announcement-dialog aria-label="Close"><i
+            data-lucide="x"></i></button>
+      </div>
+      <div class="dialog-body">
+        <input type="hidden" name="announcement_id" />
+        <label class="full">Title<input name="title" required maxlength="180"
+            placeholder="Announcement title" /></label>
+        <label class="full">Message<textarea name="content" required maxlength="10000" rows="7"
+            placeholder="Write the message members should receive..."></textarea></label>
+        <label>Priority<select name="priority">
+            <option>Normal</option>
+            <option>Important</option>
+            <option>Urgent</option>
+          </select></label>
+        <label>Audience<select name="audience_type">
+            <option>All</option>
+            <option>Fellowship</option>
+            <option>Generational Group</option>
+          </select></label>
+        <label class="full" id="announcementAudienceGroupField" hidden>Audience group<input name="audience_group"
+            placeholder="Exact fellowship or generational group name" /><small class="field-note">Only linked members in
+            this group will see the announcement.</small></label>
+        <label class="full">Attachment URL<input name="attachment_url" type="url"
+            placeholder="https://... (optional)" /></label>
+        <label>Status<select name="status">
+            <option>Draft</option>
+            <option>Published</option>
+            <option>Archived</option>
+          </select><small class="field-note">Only Published announcements appear in the Member Portal.</small></label>
+      </div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button"
+          data-close-announcement-dialog>Cancel</button><button class="primary-btn" id="saveAnnouncementBtn"
+          type="submit">Create announcement</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="memberGroupDialog" class="management-dialog member-group-dialog"
+    aria-labelledby="memberGroupDialogTitle">
+    <div class="dialog-header">
+      <div>
+        <p class="eyebrow">GENERATIONAL GROUP</p>
+        <h3 id="memberGroupDialogTitle">Group members</h3>
+        <p id="memberGroupDialogMeta" class="member-group-dialog-meta"></p>
+      </div>
+      <button class="icon-btn" type="button" data-close-member-group aria-label="Close group members"><i
+          data-lucide="x"></i></button>
+    </div>
+    <div class="dialog-body member-group-dialog-body">
+      <div class="member-group-total"><span class="member-group-total-icon"><i data-lucide="users-round"></i></span>
+        <div><strong id="memberGroupTotal">0</strong><span id="memberGroupTotalLabel">Total members</span></div>
+      </div>
+      <div class="table-scroll member-group-table-wrap">
+        <table class="member-group-table">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th>Age</th>
+              <th>Gender</th>
+              <th>Contact</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="memberGroupTable"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-member-group>Close</button>
+    </div>
+  </dialog>
+
   <dialog id="memberProfileDialog" class="member-profile-dialog" aria-labelledby="memberProfileName">
     <div class="dialog-header">
       <div class="member-profile-identity">
@@ -537,9 +624,13 @@
             placeholder="name@example.com" /></label>
         <label>Phone number<input name="phone" type="tel" placeholder="024 000 0000" /></label>
         <label>Role<select name="role_id" required></select></label>
+        <label class="full member-link-field" hidden>Linked church member<select
+            name="member_id"></select><small>Required for the Member role. One login can be linked to one existing
+            member only.</small></label>
         <label class="full create-password-field">Temporary password<span class="password-field"><input name="password"
               type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" /><button
-              type="button" id="generatePassword">Generate</button></span><small>Give this password to the administrator
+              type="button" id="generatePassword">Generate</button></span><small>Give this password to the account
+            holder
             securely.</small></label>
         <label class="full edit-status-field" hidden>Status<select name="status">
             <option value="active">Active</option>
@@ -590,7 +681,8 @@
       <div class="dialog-body"><input type="hidden" name="user_id" /><label class="full">New password<input
             name="password" type="password" autocomplete="new-password" minlength="8" required
             placeholder="At least 8 characters" /></label>
-        <p class="full dialog-note">The administrator can use this password immediately on the sign-in page.</p>
+        <p class="full dialog-note">The account holder can use this password immediately on the appropriate sign-in
+          page.</p>
       </div>
       <div class="dialog-footer"><button class="secondary-btn" type="button"
           data-close-password-dialog>Cancel</button><button class="primary-btn" type="submit">Update password</button>
@@ -598,17 +690,19 @@
     </form>
   </dialog>
 
-  <script src="components/sidebar.js"></script>
+  <script src="components/sidebar.js?v=20260820-1"></script>
   <script src="components/profile.js"></script>
-  <script src="components/user-management.js"></script>
+  <script src="components/user-management.js?v=20260820-1"></script>
+  <script src="components/announcements.js?v=20260820-1"></script>
+  <script src="components/member-profile-requests.js?v=20260820-1"></script>
   <script src="components/generational-groups.js"></script>
   <script src="components/attendance.js"></script>
-  <script src="components/communion.js"></script>
-  <script src="components/finance.js"></script>
+  <script src="components/communion.js?v=20260827-1"></script>
+  <script src="components/finance.js?v=20260827-2"></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260827-2"></script>
 </body>
 
 </html>

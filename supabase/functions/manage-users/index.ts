@@ -59,6 +59,25 @@ Deno.serve(async (request) => {
       return { target, isPrivileged };
     };
 
+    const resolveMemberLink = async (roleName: string, rawMemberId: unknown, excludingUserId = "") => {
+      const memberId = String(rawMemberId || "");
+      if (roleName !== "Member") return null;
+      if (!memberId) throw new Error("Select the existing church member for this Member Portal account.");
+      const { data: member, error: memberError } = await admin
+        .from("members")
+        .select("id,status,first_name,last_name")
+        .eq("id", memberId)
+        .single();
+      if (memberError || !member) throw new Error("The selected church member does not exist.");
+      if (member.status !== "Active") throw new Error("Only an active church member can receive Member Portal access.");
+      let linkedQuery = admin.from("user_profiles").select("id").eq("member_id", memberId);
+      if (excludingUserId) linkedQuery = linkedQuery.neq("id", excludingUserId);
+      const { data: linkedProfiles, error: linkedError } = await linkedQuery;
+      if (linkedError) throw new Error(linkedError.message);
+      if (linkedProfiles?.length) throw new Error("That church member already has a Member Portal account.");
+      return memberId;
+    };
+
     if (action === "create") {
       const email = String(payload.email || "").trim().toLowerCase();
       const password = String(payload.password || "");
@@ -78,6 +97,9 @@ Deno.serve(async (request) => {
       if (targetRole.permissions.includes("roles.manage") && !callerPermissions.includes("roles.manage")) {
         return json({ error: "Only a Super Administrator can assign that role." }, 403);
       }
+      let memberId: string | null;
+      try { memberId = await resolveMemberLink(targetRole.name, payload.member_id); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400); }
 
       const { data: created, error: createError } = await admin.auth.admin.createUser({
         email,
@@ -93,6 +115,7 @@ Deno.serve(async (request) => {
         display_name: displayName,
         phone,
         role_id: roleId,
+        member_id: memberId,
         status: "active",
         updated_at: new Date().toISOString(),
       });
@@ -115,13 +138,16 @@ Deno.serve(async (request) => {
 
       const { data: targetRole, error: roleError } = await admin
         .from("app_roles")
-        .select("permissions")
+        .select("name,permissions")
         .eq("id", roleId)
         .single();
       if (roleError || !targetRole) return json({ error: "The selected role does not exist." }, 400);
       if (targetRole.permissions.includes("roles.manage") && !callerPermissions.includes("roles.manage")) {
         return json({ error: "Only a Super Administrator can assign that role." }, 403);
       }
+      let memberId: string | null;
+      try { memberId = await resolveMemberLink(targetRole.name, payload.member_id, userId); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400); }
       if (userId === authData.user.id && status === "inactive") {
         return json({ error: "You cannot deactivate your own account." }, 400);
       }
@@ -142,6 +168,7 @@ Deno.serve(async (request) => {
         display_name: displayName,
         phone,
         role_id: roleId,
+        member_id: memberId,
         status,
         updated_at: new Date().toISOString(),
       }).eq("id", userId);

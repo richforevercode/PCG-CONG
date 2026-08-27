@@ -134,7 +134,7 @@ progress::-webkit-progress-value { background: var(--green); border-radius: 9px;
 .giving-meta { margin: 13px 24px 0; padding-top: 14px; color: var(--muted); border-top: 1px solid var(--line); }
 .giving-meta strong { color: var(--ink); }
 
-.summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+.summary-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 20px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
 .summary-item { display: flex; align-items: center; gap: 12px; padding: 17px 20px; border-right: 1px solid var(--line); }
 .summary-item:last-child { border: 0; }
 .summary-dot { width: 9px; height: 9px; background: var(--dot); border-radius: 50%; }
@@ -163,6 +163,9 @@ tbody tr:hover { background: var(--blue-50); }
 .status-pill.active, .status-pill.income { color: #067647; background: #dcfae6; }
 .status-pill.visitor, .status-pill.meeting { color: #175cd3; background: #eff4ff; }
 .status-pill.inactive, .status-pill.neutral { color: #475467; background: #f2f4f7; }
+.status-pill.transferred-in { color: #067647; background: #ecfdf3; }
+.status-pill.transferred-out { color: #934f08; background: #fffaeb; }
+.status-pill.deceased { color: #344054; background: #eaecf0; }
 .status-pill.expense { color: #b42318; background: #fef3f2; }
 .row-actions { display: flex; justify-content: flex-end; gap: 2px; }
 .row-actions .icon-btn { width: 32px; height: 32px; }

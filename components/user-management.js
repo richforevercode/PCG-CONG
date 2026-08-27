@@ -14,7 +14,9 @@
       ["attendance.view", "View attendance", "See service attendance records."],
       ["attendance.manage", "Manage attendance", "Record and update service attendance."],
       ["communion.view", "View Communion", "Read Communion occasions, registers, and member history."],
-      ["communion.manage", "Manage Communion", "Create occasions and maintain Communion registers."]
+      ["communion.manage", "Manage Communion", "Create occasions and maintain Communion registers."],
+      ["announcements.view", "View announcements", "Read all published and draft church announcements."],
+      ["announcements.manage", "Manage announcements", "Publish, edit, target, and archive church announcements."]
     ]},
     { name: "Finance", items: [
       ["finance.view", "View finance", "Read collections, balances, expenses, and reports."],
@@ -31,7 +33,7 @@
     ]}
   ];
 
-  const state = { client: null, userId: null, permissions: [], users: [], roles: [] };
+  const state = { client: null, userId: null, permissions: [], users: [], roles: [], members: [] };
   const $ = selector => document.querySelector(selector);
   const esc = (value = "") => String(value).replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
   const initials = name => String(name || "User").split(/\s+/).map(part => part[0]).join("").slice(0, 2).toUpperCase();
@@ -39,6 +41,7 @@
   const can = permission => state.permissions.includes(permission);
   const notify = (message, type) => window.PCGApp?.toast(message, type);
   const roleFor = user => Array.isArray(user.app_roles) ? user.app_roles[0] : user.app_roles;
+  const memberName = member => `${member?.first_name || ""} ${member?.last_name || ""}`.trim() || "Unnamed member";
 
   function roleOptions(selected = "") {
     return state.roles
@@ -50,7 +53,7 @@
   function renderMetrics() {
     const active = state.users.filter(user => user.status === "active").length;
     $("#userMetrics").innerHTML = [
-      [state.users.length, "Administrator accounts", "users", "#0a3995"],
+      [state.users.length, "User accounts", "users", "#0a3995"],
       [active, "Active access", "badge-check", "#087a38"],
       [state.roles.length, "Available roles", "shield-check", "#b54708"]
     ].map(([value, label, icon, color]) => `<article class="user-metric"><span class="user-metric-icon" style="--metric-color:${color}"><i data-lucide="${icon}"></i></span><div><strong>${value}</strong><span>${label}</span></div></article>`).join("");
@@ -67,19 +70,21 @@
     const status = $("#userStatusFilter").value;
     const users = state.users.filter(user => {
       const role = roleFor(user);
-      return (!query || `${user.display_name} ${user.email} ${role?.name || ""}`.toLowerCase().includes(query))
+      const member = state.members.find(item => item.id === user.member_id);
+      return (!query || `${user.display_name} ${user.email} ${role?.name || ""} ${memberName(member)} ${member?.membership_number || ""}`.toLowerCase().includes(query))
         && (roleId === "all" || user.role_id === roleId)
         && (status === "all" || user.status === status);
     });
     $("#usersTable").innerHTML = users.length ? users.map(user => {
       const role = roleFor(user);
       const isCurrent = user.id === state.userId;
+      const linkedMember = state.members.find(item => item.id === user.member_id);
       const manageable = can("roles.manage") || !role?.permissions?.includes("roles.manage");
       const deleteAction = can("roles.manage") && !isCurrent ? `<button class="icon-btn delete" data-delete-user="${user.id}" aria-label="Delete ${esc(user.display_name)}"><i data-lucide="trash-2"></i></button>` : "";
       const actions = manageable ? `<div class="row-actions"><button class="icon-btn" data-edit-user="${user.id}" aria-label="Edit ${esc(user.display_name)}"><i data-lucide="pencil"></i></button><button class="icon-btn" data-password-user="${user.id}" aria-label="Set password for ${esc(user.display_name)}"><i data-lucide="key-round"></i></button>${deleteAction}</div>` : `<span class="protected-account" title="Protected Super Administrator"><i data-lucide="lock-keyhole"></i></span>`;
-      return `<tr><td><div class="member-cell"><span class="user-avatar">${esc(initials(user.display_name))}</span><div><strong>${esc(user.display_name || "Unnamed user")}${isCurrent ? '<span class="current-user-label">You</span>' : ""}</strong><small>${esc(user.email)}</small></div></div></td><td><span class="role-name">${esc(role?.name || "No role")}</span></td><td><span class="status-pill ${user.status}">${user.status === "active" ? "Active" : "Inactive"}</span></td><td>${new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short", year: "numeric" }).format(new Date(user.created_at))}</td><td>${actions}</td></tr>`;
-    }).join("") : `<tr><td colspan="5" class="users-empty"><i data-lucide="user-round-search"></i><strong>No administrators found</strong><span>Try changing the search or filter.</span></td></tr>`;
-    $("#userTableCount").textContent = `Showing ${users.length} of ${state.users.length} administrator${state.users.length === 1 ? "" : "s"}`;
+      return `<tr><td><div class="member-cell"><span class="user-avatar">${esc(initials(user.display_name))}</span><div><strong>${esc(user.display_name || "Unnamed user")}${isCurrent ? '<span class="current-user-label">You</span>' : ""}</strong><small>${esc(user.email)}${linkedMember ? ` · ${esc(linkedMember.membership_number || memberName(linkedMember))}` : ""}</small></div></div></td><td><span class="role-name">${esc(role?.name || "No role")}</span></td><td><span class="status-pill ${user.status}">${user.status === "active" ? "Active" : "Inactive"}</span></td><td>${new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "short", year: "numeric" }).format(new Date(user.created_at))}</td><td>${actions}</td></tr>`;
+    }).join("") : `<tr><td colspan="5" class="users-empty"><i data-lucide="user-round-search"></i><strong>No accounts found</strong><span>Try changing the search or filter.</span></td></tr>`;
+    $("#userTableCount").textContent = `Showing ${users.length} of ${state.users.length} account${state.users.length === 1 ? "" : "s"}`;
     refreshIcons();
   }
 
@@ -103,17 +108,32 @@
 
   async function load() {
     if (!state.client || !can("users.manage")) return;
-    const [usersResult, rolesResult] = await Promise.all([
-      state.client.from("user_profiles").select("id,email,display_name,phone,status,created_at,role_id,app_roles(id,name,permissions)").order("created_at", { ascending: true }),
-      state.client.from("app_roles").select("id,name,description,permissions,is_system,created_at").order("is_system", { ascending: false }).order("name")
+    const [usersResult, rolesResult, membersResult] = await Promise.all([
+      state.client.from("user_profiles").select("id,email,display_name,phone,status,created_at,role_id,member_id,app_roles(id,name,permissions)").order("created_at", { ascending: true }),
+      state.client.from("app_roles").select("id,name,description,permissions,is_system,created_at").order("is_system", { ascending: false }).order("name"),
+      state.client.from("members").select("id,first_name,last_name,membership_number,email,phone,status").order("last_name").order("first_name")
     ]);
-    if (usersResult.error || rolesResult.error) {
-      notify(usersResult.error?.message || rolesResult.error?.message || "Unable to load users.", "error");
+    if (usersResult.error || rolesResult.error || membersResult.error) {
+      notify(usersResult.error?.message || rolesResult.error?.message || membersResult.error?.message || "Unable to load users.", "error");
       return;
     }
     state.users = usersResult.data || [];
     state.roles = rolesResult.data || [];
+    state.members = membersResult.data || [];
     render();
+  }
+
+  function toggleMemberLink(user = null) {
+    const form = $("#userForm"); user ||= state.users.find(item => item.id === form.elements.user_id.value) || null; const role = state.roles.find(item => item.id === form.elements.role_id.value); const memberRole = role?.name === "Member"; const field = $(".member-link-field");
+    field.hidden = !memberRole; form.elements.member_id.required = memberRole;
+    if (!memberRole) { form.elements.member_id.value = ""; return; }
+    const linkedElsewhere = new Set(state.users.filter(item => item.id !== user?.id && item.member_id).map(item => item.member_id));
+    form.elements.member_id.innerHTML = `<option value="">Select the church member…</option>${state.members.filter(member => member.status === "Active" && (!linkedElsewhere.has(member.id) || member.id === user?.member_id)).map(member => `<option value="${member.id}" ${member.id === user?.member_id ? "selected" : ""}>${esc(memberName(member))} · ${esc(member.membership_number || "No number")}</option>`).join("")}`;
+  }
+
+  function syncSelectedMember() {
+    const form = $("#userForm"); if (form.elements.user_id.value) return; const member = state.members.find(item => item.id === form.elements.member_id.value); if (!member) return;
+    form.elements.display_name.value = memberName(member); form.elements.email.value = member.email || ""; form.elements.phone.value = member.phone || "";
   }
 
   async function invoke(body) {
@@ -138,6 +158,8 @@
     form.elements.email.value = user?.email || "";
     form.elements.phone.value = user?.phone || "";
     form.elements.role_id.innerHTML = roleOptions(user?.role_id || "");
+    toggleMemberLink(user);
+    form.elements.member_id.value = user?.member_id || "";
     form.elements.status.value = user?.status || "active";
     form.elements.email.disabled = Boolean(user);
     form.elements.password.required = !user;
@@ -146,7 +168,7 @@
     $(".edit-status-field").hidden = !user;
     form.elements.status.querySelector('[value="inactive"]').disabled = user?.id === state.userId;
     $("#userDialogEyebrow").textContent = user ? "ACCOUNT ACCESS" : "NEW ACCOUNT";
-    $("#userDialogTitle").textContent = user ? "Edit administrator" : "Add administrator";
+    $("#userDialogTitle").textContent = user ? "Edit account" : "Add account";
     $("#saveUserBtn").textContent = user ? "Save changes" : "Create account";
     $("#userDialog").showModal();
     setTimeout(() => form.elements.display_name.focus(), 50);
@@ -179,10 +201,10 @@
     try {
       await invoke({ action: editing ? "update" : "create", ...values });
       $("#userDialog").close();
-      notify(editing ? "Administrator access updated." : "Administrator account created.");
+      notify(editing ? "Account access updated." : "Account created.");
       await load();
     } catch (error) {
-      notify(error.message || "Unable to save the administrator.", "error");
+      notify(error.message || "Unable to save the account.", "error");
     } finally {
       button.disabled = false;
     }
@@ -219,10 +241,10 @@
     if (!confirm(`Permanently delete ${user.display_name || user.email}? This will remove their sign-in access and cannot be undone.`)) return;
     try {
       await invoke({ action: "delete", user_id: user.id });
-      notify("Administrator account deleted.");
+      notify("Account deleted.");
       await load();
     } catch (error) {
-      notify(error.message || "Unable to delete the administrator.", "error");
+      notify(error.message || "Unable to delete the account.", "error");
     }
   }
 
@@ -245,6 +267,8 @@
     $("#userSearch").addEventListener("input", renderUsers);
     $("#userRoleFilter").addEventListener("change", renderUsers);
     $("#userStatusFilter").addEventListener("change", renderUsers);
+    $("#userForm [name=role_id]").addEventListener("change", () => toggleMemberLink());
+    $("#userForm [name=member_id]").addEventListener("change", syncSelectedMember);
     $("#userForm").addEventListener("submit", saveUser);
     $("#roleForm").addEventListener("submit", saveRole);
     $("#passwordForm").addEventListener("submit", savePassword);

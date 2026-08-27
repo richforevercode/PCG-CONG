@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#062b78" />
+  <title>Member Portal · Resurrection Congregation</title>
+  <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="components/member-portal.css?v=20260827-1" />
+</head>
+<body class="member-portal-body">
+  <div class="member-mobile-overlay" id="memberMobileOverlay" hidden></div>
+  <aside class="member-sidebar" id="memberSidebar">
+    <div class="member-brand">
+      <span class="member-brand-mark"><img src="assets/pcg-crest.png" alt="Presbyterian Church of Ghana crest" /></span>
+      <span><strong>Resurrection</strong><small>Member Portal</small></span>
+      <button class="member-sidebar-close" id="memberSidebarClose" type="button" aria-label="Close navigation"><i data-lucide="x"></i></button>
+    </div>
+    <nav class="member-navigation" aria-label="Member portal navigation">
+      <button class="active" type="button" data-member-page="dashboard"><i data-lucide="house"></i><span>Dashboard</span></button>
+      <button type="button" data-member-page="profile"><i data-lucide="circle-user-round"></i><span>My Profile</span></button>
+      <button type="button" data-member-page="giving"><i data-lucide="hand-coins"></i><span>My Giving</span></button>
+      <button type="button" data-member-page="pledges"><i data-lucide="badge-dollar-sign"></i><span>My Pledges</span></button>
+      <button type="button" data-member-page="communion"><i data-lucide="church"></i><span>My Communion</span></button>
+      <button type="button" data-member-page="attendance"><i data-lucide="calendar-check-2"></i><span>My Attendance</span></button>
+      <button type="button" data-member-page="events"><i data-lucide="calendar-days"></i><span>Events &amp; Calendar</span></button>
+      <button type="button" data-member-page="announcements"><i data-lucide="megaphone"></i><span>Announcements</span></button>
+      <button type="button" data-member-page="fellowship"><i data-lucide="users-round"></i><span>My Fellowship</span></button>
+      <button type="button" data-member-page="settings"><i data-lucide="settings"></i><span>Settings</span></button>
+    </nav>
+    <div class="member-sidebar-privacy"><i data-lucide="shield-check"></i><span><strong>Your records are private</strong><small>Only information linked to your account appears here.</small></span></div>
+  </aside>
+
+  <div class="member-shell">
+    <header class="member-topbar">
+      <button class="member-menu-button" id="memberMenuButton" type="button" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+      <div><small id="memberTopbarLabel">Member Portal</small><strong id="memberTopbarTitle">Dashboard</strong></div>
+      <div class="member-account">
+        <span class="member-account-avatar" id="memberAccountAvatar">M</span>
+        <span class="member-account-copy"><strong id="memberAccountName">Member</strong><small>Private account</small></span>
+        <button class="member-signout" id="memberSignOut" type="button" title="Sign out"><i data-lucide="log-out"></i><span>Sign out</span></button>
+      </div>
+    </header>
+    <main class="member-main" id="memberMain" tabindex="-1">
+      <div class="member-loading" id="memberLoading"><i data-lucide="loader-circle"></i><strong>Preparing your private portal…</strong><span>Loading only the records linked to your account.</span></div>
+      <div class="member-alert" id="memberAlert" role="alert" hidden></div>
+      <div id="memberPortalContent" hidden></div>
+    </main>
+  </div>
+
+  <dialog class="member-dialog" id="memberContactDialog">
+    <form id="memberContactForm">
+      <div class="member-dialog-heading"><div><p>MY PROFILE</p><h2>Update contact information</h2></div><button type="button" data-close-member-dialog="memberContactDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="member-dialog-body">
+        <label>Phone number<input name="phone" type="tel" maxlength="40" /></label>
+        <label>Email address<input name="email" type="email" maxlength="254" /></label>
+        <label class="full">Address or location<textarea name="address" maxlength="500" rows="3"></textarea></label>
+        <label class="full">Profile photo URL<input name="profile_photo_url" type="url" maxlength="1000" placeholder="https://…" /></label>
+        <p class="member-form-error full" id="memberContactError" hidden></p>
+      </div>
+      <div class="member-dialog-actions"><button class="member-button secondary" type="button" data-close-member-dialog="memberContactDialog">Cancel</button><button class="member-button primary" type="submit">Save contact details</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="member-dialog" id="memberRequestDialog">
+    <form id="memberRequestForm">
+      <div class="member-dialog-heading"><div><p>PROTECTED INFORMATION</p><h2>Request a profile correction</h2></div><button type="button" data-close-member-dialog="memberRequestDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="member-dialog-body single">
+        <label>What should be corrected?<textarea name="details" required maxlength="1000" rows="5" placeholder="Describe the official information and the correct value."></textarea></label>
+        <label>Reason or supporting context<textarea name="reason" maxlength="1000" rows="3"></textarea></label>
+        <p class="member-form-error" id="memberRequestError" hidden></p>
+      </div>
+      <div class="member-dialog-actions"><button class="member-button secondary" type="button" data-close-member-dialog="memberRequestDialog">Cancel</button><button class="member-button primary" type="submit">Submit request</button></div>
+    </form>
+  </dialog>
+
+  <div class="member-toast-region" id="memberToastRegion" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="components/member-portal.js?v=20260820-1"></script>
+</body>
+</html>
