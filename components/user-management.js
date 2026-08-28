@@ -42,6 +42,7 @@
   const notify = (message, type) => window.PCGApp?.toast(message, type);
   const roleFor = user => Array.isArray(user.app_roles) ? user.app_roles[0] : user.app_roles;
   const memberName = member => `${member?.first_name || ""} ${member?.last_name || ""}`.trim() || "Unnamed member";
+  const strongPassword = password => password.length >= 12 && password.length <= 128 && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
 
   function roleOptions(selected = "") {
     return state.roles
@@ -196,6 +197,7 @@
     if (!event.currentTarget.reportValidity()) return;
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
     const editing = Boolean(values.user_id);
+    if (!editing && !strongPassword(values.password || "")) return notify("Use 12–128 characters with uppercase, lowercase, a number, and a symbol.", "error");
     const button = $("#saveUserBtn");
     button.disabled = true;
     try {
@@ -252,6 +254,7 @@
     event.preventDefault();
     if (!event.currentTarget.reportValidity()) return;
     const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+    if (!strongPassword(values.password || "")) return notify("Use 12–128 characters with uppercase, lowercase, a number, and a symbol.", "error");
     try {
       await invoke({ action: "password", ...values });
       $("#passwordDialog").close();
@@ -273,9 +276,21 @@
     $("#roleForm").addEventListener("submit", saveRole);
     $("#passwordForm").addEventListener("submit", savePassword);
     $("#generatePassword").addEventListener("click", () => {
-      const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
-      const bytes = crypto.getRandomValues(new Uint8Array(14));
-      const password = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join("");
+      const groups = ["ABCDEFGHJKLMNPQRSTUVWXYZ", "abcdefghijkmnopqrstuvwxyz", "23456789", "!@#$%"];
+      const alphabet = groups.join("");
+      const randomIndex = length => {
+        const limit = 256 - (256 % length);
+        let value;
+        do { value = crypto.getRandomValues(new Uint8Array(1))[0]; } while (value >= limit);
+        return value % length;
+      };
+      const characters = groups.map(group => group[randomIndex(group.length)]);
+      while (characters.length < 20) characters.push(alphabet[randomIndex(alphabet.length)]);
+      for (let index = characters.length - 1; index > 0; index -= 1) {
+        const swapIndex = randomIndex(index + 1);
+        [characters[index], characters[swapIndex]] = [characters[swapIndex], characters[index]];
+      }
+      const password = characters.join("");
       const input = $("#userForm [name=password]");
       input.type = "text";
       input.value = password;

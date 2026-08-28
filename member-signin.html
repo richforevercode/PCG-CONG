@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#062b78" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://bemodednhyzhfolkleoz.supabase.co wss://bemodednhyzhfolkleoz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:" />
   <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
   <title>Member Sign In · Resurrection Congregation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -24,7 +26,7 @@
         <div class="member-login-alert" id="memberSigninAlert" role="alert" hidden><i data-lucide="circle-alert"></i><span></span></div>
         <form id="memberSigninForm">
           <label>Email address<span><i data-lucide="mail"></i><input name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></span></label>
-          <label>Password<span><i data-lucide="lock-keyhole"></i><input id="memberSigninPassword" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Enter your password" /><button id="memberTogglePassword" type="button" aria-label="Show password"><i data-lucide="eye"></i></button></span></label>
+          <label>Password<span><i data-lucide="lock-keyhole"></i><input id="memberSigninPassword" name="password" type="password" autocomplete="current-password" required placeholder="Enter your password" /><button id="memberTogglePassword" type="button" aria-label="Show password"><i data-lucide="eye"></i></button></span></label>
           <button class="member-login-button" id="memberSigninButton" type="submit"><span>Sign in to Member Portal</span><i data-lucide="arrow-right"></i></button>
         </form>
         <p class="member-login-help">Need an account or password reset? Contact the church administrator.</p>
@@ -32,8 +34,8 @@
       </div>
     </section>
   </main>
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/vendor/lucide-0.468.0.min.js"></script>
+  <script src="assets/vendor/supabase-js-2.112.4.min.js"></script>
   <script src="config.js"></script>
   <script src="components/member-signin.js?v=20260820-1"></script>
 </body>

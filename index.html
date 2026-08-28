@@ -5,6 +5,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#062b78" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://bemodednhyzhfolkleoz.supabase.co wss://bemodednhyzhfolkleoz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:" />
   <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
   <meta name="description"
     content="Church management system for Presbyterian Church of Ghana, Resurrection Congregation." />
@@ -14,7 +17,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260827-1" />
+  <link rel="stylesheet" href="styles.css?v=20260827-2" />
   <link rel="stylesheet" href="components/sidebar.css" />
   <link rel="stylesheet" href="components/dashboard.css" />
   <link rel="stylesheet" href="components/generational-groups.css?v=20260827-1" />
@@ -395,7 +398,7 @@
                 <div class="form-actions"><button class="secondary-btn" type="button" id="signOutBtn" hidden>Sign
                     out</button><button class="primary-btn" type="submit" id="signInBtn">Sign in</button></div>
               </form>
-              <details class="advanced-settings">
+              <details class="advanced-settings" id="runtimeDatabaseConfig">
                 <summary><span><i data-lucide="square-terminal"></i><strong>Developer connection
                       settings</strong></span><i data-lucide="chevron-down"></i></summary>
                 <div class="advanced-settings-body">
@@ -515,11 +518,10 @@
     </form>
   </dialog>
 
-  <dialog id="memberGroupDialog" class="management-dialog member-group-dialog"
-    aria-labelledby="memberGroupDialogTitle">
+  <dialog id="memberGroupDialog" class="management-dialog member-group-dialog" aria-labelledby="memberGroupDialogTitle">
     <div class="dialog-header">
       <div>
-        <p class="eyebrow">GENERATIONAL GROUP</p>
+        <p class="eyebrow" id="memberGroupDialogEyebrow">MEMBER ROSTER</p>
         <h3 id="memberGroupDialogTitle">Group members</h3>
         <p id="memberGroupDialogMeta" class="member-group-dialog-meta"></p>
       </div>
@@ -628,8 +630,9 @@
             name="member_id"></select><small>Required for the Member role. One login can be linked to one existing
             member only.</small></label>
         <label class="full create-password-field">Temporary password<span class="password-field"><input name="password"
-              type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" /><button
-              type="button" id="generatePassword">Generate</button></span><small>Give this password to the account
+              type="password" autocomplete="new-password" minlength="12" maxlength="128"
+              placeholder="12–128 characters" /><button type="button"
+              id="generatePassword">Generate</button></span><small>Give this password to the account
             holder
             securely.</small></label>
         <label class="full edit-status-field" hidden>Status<select name="status">
@@ -679,8 +682,8 @@
             data-lucide="x"></i></button>
       </div>
       <div class="dialog-body"><input type="hidden" name="user_id" /><label class="full">New password<input
-            name="password" type="password" autocomplete="new-password" minlength="8" required
-            placeholder="At least 8 characters" /></label>
+            name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required
+            placeholder="12–128 characters" /></label>
         <p class="full dialog-note">The account holder can use this password immediately on the appropriate sign-in
           page.</p>
       </div>
@@ -699,10 +702,10 @@
   <script src="components/attendance.js"></script>
   <script src="components/communion.js?v=20260827-1"></script>
   <script src="components/finance.js?v=20260827-2"></script>
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/vendor/lucide-0.468.0.min.js"></script>
+  <script src="assets/vendor/supabase-js-2.112.4.min.js"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=20260827-2"></script>
+  <script src="app.js?v=20260827-3"></script>
 </body>
 
 </html>

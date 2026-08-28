@@ -4,13 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#062b78" />
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://bemodednhyzhfolkleoz.supabase.co wss://bemodednhyzhfolkleoz.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:" />
   <link rel="icon" type="image/png" href="assets/pcg-crest.png" />
   <meta name="description" content="Administrator sign in for Presbyterian Church of Ghana, Resurrection Congregation." />
   <title>Sign in | Resurrection Congregation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="components/signin.css?v=20260820-1" />
+  <link rel="stylesheet" href="components/signin.css?v=20260827-3" />
 </head>
 <body>
   <main class="signin-shell">
@@ -53,10 +55,26 @@
             <span class="input-control"><i data-lucide="mail"></i><input name="email" type="email" autocomplete="username" placeholder="name@example.com" required /></span>
           </label>
           <label>Password
-            <span class="input-control"><i data-lucide="lock-keyhole"></i><input name="password" id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter your password" minlength="8" required /><button type="button" id="togglePassword" aria-label="Show password"><i data-lucide="eye"></i></button></span>
+            <span class="input-control"><i data-lucide="lock-keyhole"></i><input name="password" id="signinPassword" type="password" autocomplete="current-password" placeholder="Enter your password" required /><button type="button" id="togglePassword" aria-label="Show password"><i data-lucide="eye"></i></button></span>
           </label>
           <button class="signin-button" id="signinButton" type="submit"><span>Sign in to dashboard</span><i data-lucide="arrow-right"></i></button>
         </form>
+
+        <section class="signin-mfa" id="signinMfa" aria-labelledby="signinMfaTitle" hidden>
+          <div class="signin-mfa-heading"><span><i data-lucide="smartphone"></i></span><div><h3 id="signinMfaTitle">Verify your identity</h3><p id="signinMfaDescription">Enter the six-digit code from your authenticator app.</p></div></div>
+          <div class="signin-mfa-enrollment" id="signinMfaEnrollment" hidden>
+            <img id="signinMfaQr" alt="Authenticator setup QR code" />
+            <p>Scan this QR code with an authenticator app. If scanning is unavailable, enter this setup key:</p>
+            <code id="signinMfaSecret"></code>
+          </div>
+          <form id="signinMfaForm">
+            <label>Six-digit security code
+              <span class="input-control"><i data-lucide="key-round"></i><input name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="000000" /></span>
+            </label>
+            <button class="signin-button" id="signinMfaButton" type="submit"><span>Verify and continue</span><i data-lucide="shield-check"></i></button>
+          </form>
+          <button class="signin-mfa-cancel" id="signinMfaCancel" type="button">Cancel and sign out</button>
+        </section>
 
         <div class="signin-help">
           <i data-lucide="circle-help"></i>
@@ -68,9 +86,9 @@
     </section>
   </main>
 
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="assets/vendor/lucide-0.468.0.min.js"></script>
+  <script src="assets/vendor/supabase-js-2.112.4.min.js"></script>
   <script src="config.js"></script>
-  <script src="components/signin.js?v=20260820-2"></script>
+  <script src="components/signin.js?v=20260828-1"></script>
 </body>
 </html>

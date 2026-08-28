@@ -1,34 +1,80 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.4";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = new Set([
+  "http://127.0.0.1:3000",
+  "http://localhost:3000",
+  ...configuredOrigins,
+]);
+
+const corsHeaders = (origin: string | null) => ({
+  ...(origin && allowedOrigins.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { ...corsHeaders, "Content-Type": "application/json" },
+  "Access-Control-Max-Age": "86400",
+  "Vary": "Origin",
 });
 
+const json = (body: unknown, status = 200, origin: string | null = null) => new Response(JSON.stringify(body), {
+  status,
+  headers: { ...corsHeaders(origin), "Content-Type": "application/json", "Cache-Control": "no-store" },
+});
+
+const jwtClaims = (token: string) => {
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return {} as Record<string, unknown>;
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    return JSON.parse(atob(normalized)) as Record<string, unknown>;
+  } catch (_) {
+    return {} as Record<string, unknown>;
+  }
+};
+const strongPassword = (password: string) => password.length >= 12
+  && password.length <= 128
+  && /[a-z]/.test(password)
+  && /[A-Z]/.test(password)
+  && /\d/.test(password)
+  && /[^A-Za-z0-9]/.test(password);
+
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (request.method !== "POST") return json({ error: "Method not allowed." }, 405);
+  const origin = request.headers.get("Origin");
+  if (origin && !allowedOrigins.has(origin)) return json({ error: "Origin is not allowed." }, 403);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(origin) });
+  if (request.method !== "POST") return json({ error: "Method not allowed." }, 405, origin);
+  if (Number(request.headers.get("Content-Length") || 0) > 32_768) return json({ error: "Request body is too large." }, 413, origin);
 
   try {
     const authorization = request.headers.get("Authorization") || "";
     const token = authorization.replace(/^Bearer\s+/i, "");
-    if (!token) return json({ error: "Authentication required." }, 401);
+    if (!token) return json({ error: "Authentication required." }, 401, origin);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) return json({ error: "Server configuration is incomplete." }, 500);
+    if (!supabaseUrl || !serviceRoleKey) return json({ error: "Server configuration is incomplete." }, 500, origin);
 
     const admin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
     const { data: authData, error: authError } = await admin.auth.getUser(token);
-    if (authError || !authData.user) return json({ error: "Your session is no longer valid." }, 401);
+    if (authError || !authData.user) return json({ error: "Your session is no longer valid." }, 401, origin);
+    if (jwtClaims(token).aal !== "aal2") {
+      return json({ error: "Multi-factor authentication is required for user administration." }, 403, origin);
+    }
+
+    const audit = async (action: string, entityId: string, metadata: Record<string, unknown> = {}) => {
+      const { error } = await admin.from("security_audit_log").insert({
+        actor_id: authData.user.id,
+        action,
+        entity_type: "user_account",
+        entity_id: entityId,
+        metadata,
+      });
+      if (error) console.error("Security audit write failed", { action, entityId, error: error.message });
+    };
 
     const { data: caller, error: callerError } = await admin
       .from("user_profiles")
@@ -38,7 +84,7 @@ Deno.serve(async (request) => {
     const callerRole = Array.isArray(caller?.app_roles) ? caller?.app_roles[0] : caller?.app_roles;
     const callerPermissions: string[] = callerRole?.permissions || [];
     if (callerError || caller?.status !== "active" || !callerPermissions.includes("users.manage")) {
-      return json({ error: "You do not have permission to manage users." }, 403);
+      return json({ error: "You do not have permission to manage users." }, 403, origin);
     }
 
     const payload = await request.json();
@@ -84,8 +130,8 @@ Deno.serve(async (request) => {
       const displayName = String(payload.display_name || "").trim();
       const phone = String(payload.phone || "").trim();
       const roleId = String(payload.role_id || "");
-      if (!email || !displayName || !roleId || password.length < 8) {
-        return json({ error: "Name, email, role, and a password of at least 8 characters are required." }, 400);
+      if (!email || email.length > 254 || !displayName || displayName.length > 160 || phone.length > 50 || !roleId || !strongPassword(password)) {
+        return json({ error: "A valid-length name, email, role, and a 12–128 character password with uppercase, lowercase, a number, and a symbol are required." }, 400, origin);
       }
 
       const { data: targetRole, error: roleError } = await admin
@@ -93,13 +139,13 @@ Deno.serve(async (request) => {
         .select("id,name,permissions")
         .eq("id", roleId)
         .single();
-      if (roleError || !targetRole) return json({ error: "The selected role does not exist." }, 400);
+      if (roleError || !targetRole) return json({ error: "The selected role does not exist." }, 400, origin);
       if (targetRole.permissions.includes("roles.manage") && !callerPermissions.includes("roles.manage")) {
-        return json({ error: "Only a Super Administrator can assign that role." }, 403);
+        return json({ error: "Only a Super Administrator can assign that role." }, 403, origin);
       }
       let memberId: string | null;
       try { memberId = await resolveMemberLink(targetRole.name, payload.member_id); }
-      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400, origin); }
 
       const { data: created, error: createError } = await admin.auth.admin.createUser({
         email,
@@ -107,7 +153,7 @@ Deno.serve(async (request) => {
         email_confirm: true,
         user_metadata: { display_name: displayName, phone },
       });
-      if (createError || !created.user) return json({ error: createError?.message || "Unable to create the user." }, 400);
+      if (createError || !created.user) return json({ error: createError?.message || "Unable to create the user." }, 400, origin);
 
       const { error: profileError } = await admin.from("user_profiles").upsert({
         id: created.user.id,
@@ -121,9 +167,10 @@ Deno.serve(async (request) => {
       });
       if (profileError) {
         await admin.auth.admin.deleteUser(created.user.id);
-        return json({ error: profileError.message }, 400);
+        return json({ error: profileError.message }, 400, origin);
       }
-      return json({ user: { id: created.user.id, email, display_name: displayName } }, 201);
+      await audit("user.created", created.user.id, { email, display_name: displayName, role_id: roleId, member_id: memberId });
+      return json({ user: { id: created.user.id, email, display_name: displayName } }, 201, origin);
     }
 
     if (action === "update") {
@@ -132,7 +179,7 @@ Deno.serve(async (request) => {
       const status = payload.status === "inactive" ? "inactive" : "active";
       const displayName = String(payload.display_name || "").trim();
       const phone = String(payload.phone || "").trim();
-      if (!userId || !roleId || !displayName) return json({ error: "User, name, and role are required." }, 400);
+      if (!userId || !roleId || !displayName || displayName.length > 160 || phone.length > 50) return json({ error: "A valid-length user, name, phone, and role are required." }, 400, origin);
 
       const { target: existingTarget, isPrivileged } = await protectPrivilegedTarget(userId);
 
@@ -141,27 +188,27 @@ Deno.serve(async (request) => {
         .select("name,permissions")
         .eq("id", roleId)
         .single();
-      if (roleError || !targetRole) return json({ error: "The selected role does not exist." }, 400);
+      if (roleError || !targetRole) return json({ error: "The selected role does not exist." }, 400, origin);
       if (targetRole.permissions.includes("roles.manage") && !callerPermissions.includes("roles.manage")) {
-        return json({ error: "Only a Super Administrator can assign that role." }, 403);
+        return json({ error: "Only a Super Administrator can assign that role." }, 403, origin);
       }
       let memberId: string | null;
       try { memberId = await resolveMemberLink(targetRole.name, payload.member_id, userId); }
-      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400); }
+      catch (error) { return json({ error: error instanceof Error ? error.message : "Unable to link the member." }, 400, origin); }
       if (userId === authData.user.id && status === "inactive") {
-        return json({ error: "You cannot deactivate your own account." }, 400);
+        return json({ error: "You cannot deactivate your own account." }, 400, origin);
       }
       if (isPrivileged && existingTarget.status === "active" && (status === "inactive" || !targetRole.permissions.includes("roles.manage"))) {
         const { data: activeProfiles, error: activeProfilesError } = await admin
           .from("user_profiles")
           .select("id,app_roles(permissions)")
           .eq("status", "active");
-        if (activeProfilesError) return json({ error: activeProfilesError.message }, 400);
+        if (activeProfilesError) return json({ error: activeProfilesError.message }, 400, origin);
         const privilegedCount = (activeProfiles || []).filter((profile) => {
           const profileRole = Array.isArray(profile.app_roles) ? profile.app_roles[0] : profile.app_roles;
           return (profileRole?.permissions || []).includes("roles.manage");
         }).length;
-        if (privilegedCount <= 1) return json({ error: "At least one active Super Administrator must remain." }, 400);
+        if (privilegedCount <= 1) return json({ error: "At least one active Super Administrator must remain." }, 400, origin);
       }
 
       const { error: profileError } = await admin.from("user_profiles").update({
@@ -172,18 +219,19 @@ Deno.serve(async (request) => {
         status,
         updated_at: new Date().toISOString(),
       }).eq("id", userId);
-      if (profileError) return json({ error: profileError.message }, 400);
-      return json({ success: true });
+      if (profileError) return json({ error: profileError.message }, 400, origin);
+      await audit("user.updated", userId, { display_name: displayName, role_id: roleId, member_id: memberId, status });
+      return json({ success: true }, 200, origin);
     }
 
     if (action === "delete") {
       const userId = String(payload.user_id || "");
-      if (!userId) return json({ error: "A user is required." }, 400);
+      if (!userId) return json({ error: "A user is required." }, 400, origin);
       if (!callerPermissions.includes("roles.manage")) {
-        return json({ error: "Only a Super Administrator can delete users." }, 403);
+        return json({ error: "Only a Super Administrator can delete users." }, 403, origin);
       }
       if (userId === authData.user.id) {
-        return json({ error: "You cannot delete your own account." }, 400);
+        return json({ error: "You cannot delete your own account." }, 400, origin);
       }
 
       const { target, isPrivileged } = await protectPrivilegedTarget(userId);
@@ -192,31 +240,33 @@ Deno.serve(async (request) => {
           .from("user_profiles")
           .select("id,app_roles(permissions)")
           .eq("status", "active");
-        if (activeProfilesError) return json({ error: activeProfilesError.message }, 400);
+        if (activeProfilesError) return json({ error: activeProfilesError.message }, 400, origin);
         const privilegedCount = (activeProfiles || []).filter((profile) => {
           const profileRole = Array.isArray(profile.app_roles) ? profile.app_roles[0] : profile.app_roles;
           return (profileRole?.permissions || []).includes("roles.manage");
         }).length;
-        if (privilegedCount <= 1) return json({ error: "At least one active Super Administrator must remain." }, 400);
+        if (privilegedCount <= 1) return json({ error: "At least one active Super Administrator must remain." }, 400, origin);
       }
 
       const { error } = await admin.auth.admin.deleteUser(userId);
-      if (error) return json({ error: error.message }, 400);
-      return json({ success: true });
+      if (error) return json({ error: error.message }, 400, origin);
+      await audit("user.deleted", userId);
+      return json({ success: true }, 200, origin);
     }
 
     if (action === "password") {
       const userId = String(payload.user_id || "");
       const password = String(payload.password || "");
-      if (!userId || password.length < 8) return json({ error: "Use a password of at least 8 characters." }, 400);
+      if (!userId || !strongPassword(password)) return json({ error: "Use 12–128 characters with uppercase, lowercase, a number, and a symbol." }, 400, origin);
       await protectPrivilegedTarget(userId);
       const { error } = await admin.auth.admin.updateUserById(userId, { password });
-      if (error) return json({ error: error.message }, 400);
-      return json({ success: true });
+      if (error) return json({ error: error.message }, 400, origin);
+      await audit("password.admin_reset", userId);
+      return json({ success: true }, 200, origin);
     }
 
-    return json({ error: "Unknown user-management action." }, 400);
+    return json({ error: "Unknown user-management action." }, 400, origin);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : "Unexpected server error." }, 500);
+    return json({ error: error instanceof Error ? error.message : "Unexpected server error." }, 500, origin);
   }
 });

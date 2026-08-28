@@ -248,15 +248,15 @@
       return (!query || haystack.includes(query)) && (status === "all" || member.status === status);
     }).sort((a, b) => nameCollator.compare(fullName(a), fullName(b)));
     const statuses = [
-      ["All members", state.members.length, "#0a3995"],
-      ["Active", state.members.filter(m => m.status === "Active").length, "#087a38"],
-      ["Visitors", state.members.filter(m => m.status === "Visitor").length, "#175cd3"],
-      ["Inactive", state.members.filter(m => m.status === "Inactive").length, "#98a2b3"],
-      ["Transferred In", state.members.filter(m => m.status === "Transferred In").length, "#12a594"],
-      ["Transferred Out", state.members.filter(m => m.status === "Transferred Out").length, "#b54708"],
-      ["Deceased", state.members.filter(m => m.status === "Deceased").length, "#344054"]
+      ["All members", state.members.length, "#0a3995", "all"],
+      ["Active", state.members.filter(m => m.status === "Active").length, "#087a38", "Active"],
+      ["Visitors", state.members.filter(m => m.status === "Visitor").length, "#175cd3", "Visitor"],
+      ["Inactive", state.members.filter(m => m.status === "Inactive").length, "#98a2b3", "Inactive"],
+      ["Transferred In", state.members.filter(m => m.status === "Transferred In").length, "#12a594", "Transferred In"],
+      ["Transferred Out", state.members.filter(m => m.status === "Transferred Out").length, "#b54708", "Transferred Out"],
+      ["Deceased", state.members.filter(m => m.status === "Deceased").length, "#344054", "Deceased"]
     ];
-    $("#memberSummary").innerHTML = statuses.map(([label, count, color]) => `<div class="summary-item"><span class="summary-dot" style="--dot:${color}"></span><div><strong>${count}</strong><span>${label}</span></div></div>`).join("");
+    $("#memberSummary").innerHTML = statuses.map(([label, count, color, value]) => `<button class="summary-item" type="button" data-view-member-status="${value}" aria-label="View ${count} ${esc(label.toLowerCase())}"><span class="summary-dot" style="--dot:${color}"></span><div><strong>${count}</strong><span>${label}</span></div><i data-lucide="arrow-up-right"></i></button>`).join("");
     const configuredGroups = window.GenerationalGroups?.getGroups().filter(group => group.status === "Active") || [];
     const groupCounts = new Map(configuredGroups.map(group => [group.id, 0]));
     let unclassified = 0;
@@ -431,29 +431,14 @@
     refreshIcons();
   }
 
-  function openGenerationalGroupMembers(groupId) {
-    const unclassified = groupId === "unclassified";
-    const group = unclassified
-      ? null
-      : window.GenerationalGroups?.getGroups().find(item => item.id === groupId && item.status === "Active");
-    if (!unclassified && !group) return toast("This generational group is no longer available.", "error");
-
-    const members = state.members.filter(member => {
-      const classification = memberClassification(member);
-      return unclassified
-        ? classification.code !== "matched"
-        : classification.code === "matched" && classification.group.id === group.id;
-    }).sort((left, right) => nameCollator.compare(fullName(left), fullName(right)));
-    const groupName = unclassified ? "Not currently classified" : group.name;
-    const groupMeta = unclassified
-      ? "Members without one clear active age-based classification"
-      : `Age ${window.GenerationalGroups.formatAgeRange(group)} · ${group.gender}`;
-
-    $("#memberGroupDialogTitle").textContent = groupName;
-    $("#memberGroupDialogMeta").textContent = groupMeta;
-    $("#memberGroupTotal").textContent = members.length;
-    $("#memberGroupTotalLabel").textContent = `Total member${members.length === 1 ? "" : "s"}`;
-    $("#memberGroupTable").innerHTML = members.length ? members.map(member => {
+  function openMemberRoster({ title, meta, members, eyebrow = "MEMBER ROSTER" }) {
+    const sortedMembers = members.slice().sort((left, right) => nameCollator.compare(fullName(left), fullName(right)));
+    $("#memberGroupDialogEyebrow").textContent = eyebrow;
+    $("#memberGroupDialogTitle").textContent = title;
+    $("#memberGroupDialogMeta").textContent = meta;
+    $("#memberGroupTotal").textContent = sortedMembers.length;
+    $("#memberGroupTotalLabel").textContent = `Total member${sortedMembers.length === 1 ? "" : "s"}`;
+    $("#memberGroupTable").innerHTML = sortedMembers.length ? sortedMembers.map(member => {
       const classification = memberClassification(member);
       const presentation = classificationPresentation(classification);
       return `<tr>
@@ -463,9 +448,43 @@
         <td data-label="Contact"><span>${esc(member.phone || "—")}</span><small class="cell-subtext">${esc(member.email || "No email")}</small></td>
         <td data-label="Status"><span class="status-pill ${memberStatusClass(member)}">${esc(member.status || "Inactive")}</span></td>
       </tr>`;
-    }).join("") : `<tr><td colspan="5"><div class="empty-state"><i data-lucide="users-round"></i><p>No members are currently in ${esc(groupName)}.</p></div></td></tr>`;
+    }).join("") : `<tr><td colspan="5"><div class="empty-state"><i data-lucide="users-round"></i><p>No members are currently in ${esc(title)}.</p></div></td></tr>`;
     $("#memberGroupDialog").showModal();
     refreshIcons();
+  }
+
+  function openGenerationalGroupMembers(groupId) {
+    const unclassified = groupId === "unclassified";
+    const group = unclassified
+      ? null
+      : window.GenerationalGroups?.getGroups().find(item => item.id === groupId && item.status === "Active");
+    if (!unclassified && !group) return toast("This generational group is no longer available.", "error");
+    const members = state.members.filter(member => {
+      const classification = memberClassification(member);
+      return unclassified
+        ? classification.code !== "matched"
+        : classification.code === "matched" && classification.group.id === group.id;
+    });
+    openMemberRoster({
+      title: unclassified ? "Not currently classified" : group.name,
+      meta: unclassified
+        ? "Members without one clear active age-based classification"
+        : `Age ${window.GenerationalGroups.formatAgeRange(group)} · ${group.gender}`,
+      members,
+      eyebrow: "GENERATIONAL GROUP"
+    });
+  }
+
+  function openMembershipStatusMembers(status) {
+    const allMembers = status === "all";
+    const title = allMembers ? "All members" : status === "Visitor" ? "Visitors" : status;
+    const members = allMembers ? state.members : state.members.filter(member => member.status === status);
+    openMemberRoster({
+      title,
+      meta: allMembers ? "All congregation membership records" : `Members with ${status} status`,
+      members,
+      eyebrow: "MEMBERSHIP STATUS"
+    });
   }
 
   function openMemberProfile(member) {
@@ -620,7 +639,12 @@
   function exportCsv(filename, rows) {
     if (!rows.length) return toast("There is no data to export.", "error");
     const keys = Object.keys(rows[0]);
-    const csv = [keys.join(","), ...rows.map(row => keys.map(key => `"${String(row[key] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+    const safeCell = value => {
+      let text = String(value ?? "");
+      if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+      return `"${text.replace(/"/g, '""')}"`;
+    };
+    const csv = [keys.map(safeCell).join(","), ...rows.map(row => keys.map(key => safeCell(row[key])).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -637,8 +661,9 @@
   }
 
   async function initializeSupabase(showFeedback = false) {
-    const saved = JSON.parse(localStorage.getItem("pcg_supabase") || "null");
-    const config = saved || window.PCG_SUPABASE || {};
+    const deploymentConfig = window.PCG_SUPABASE || {};
+    const saved = deploymentConfig.allowRuntimeConfiguration === true ? JSON.parse(localStorage.getItem("pcg_supabase") || "null") : null;
+    const config = saved || deploymentConfig;
     if (!config.url || !(config.anonKey || config.key) || !window.supabase) {
       state.dataMode = "configured";
       updateConnectionUI();
@@ -674,6 +699,12 @@
       const assignedRole = Array.isArray(userProfile.app_roles) ? userProfile.app_roles[0] : userProfile.app_roles;
       if (assignedRole?.name === "Member") {
         location.replace("member-portal.html");
+        return false;
+      }
+      const { data: assurance, error: assuranceError } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assuranceError) throw assuranceError;
+      if (assurance.currentLevel !== "aal2") {
+        location.replace("signin.html?reason=mfa");
         return false;
       }
       state.userProfile = userProfile;
@@ -840,6 +871,8 @@
       }
       const generationalGroupId = event.target.closest("[data-view-generational-group]")?.dataset.viewGenerationalGroup;
       if (generationalGroupId) openGenerationalGroupMembers(generationalGroupId);
+      const memberStatus = event.target.closest("[data-view-member-status]")?.dataset.viewMemberStatus;
+      if (memberStatus) openMembershipStatusMembers(memberStatus);
       const editId = event.target.closest("[data-edit-member]")?.dataset.editMember;
       if (editId) openDialog("member", state.members.find(member => member.id === editId));
       const memberId = event.target.closest("[data-delete-member]")?.dataset.deleteMember;
@@ -900,8 +933,10 @@
     window.addEventListener("pcg:profile-settings", () => navigate("settings"));
     window.addEventListener("pcg:profile-signout", signOut);
     $("#churchSettingsForm").addEventListener("submit", event => { event.preventDefault(); localStorage.setItem("pcg_church", JSON.stringify(Object.fromEntries(new FormData(event.currentTarget).entries()))); toast("Congregation details saved."); });
-    $("#testConnection").addEventListener("click", async () => { const values = Object.fromEntries(new FormData($("#supabaseForm")).entries()); localStorage.setItem("pcg_supabase", JSON.stringify({ url: values.url, anonKey: values.key })); await initializeSupabase(true); });
-    $("#supabaseForm").addEventListener("submit", async event => { event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget).entries()); localStorage.setItem("pcg_supabase", JSON.stringify({ url: values.url, anonKey: values.key })); await initializeSupabase(true); });
+    if (window.PCG_SUPABASE?.allowRuntimeConfiguration === true) {
+      $("#testConnection").addEventListener("click", async () => { const values = Object.fromEntries(new FormData($("#supabaseForm")).entries()); localStorage.setItem("pcg_supabase", JSON.stringify({ url: values.url, anonKey: values.key })); await initializeSupabase(true); });
+      $("#supabaseForm").addEventListener("submit", async event => { event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget).entries()); localStorage.setItem("pcg_supabase", JSON.stringify({ url: values.url, anonKey: values.key })); await initializeSupabase(true); });
+    }
     $("#authForm").addEventListener("submit", signIn);
     $("#signOutBtn").addEventListener("click", signOut);
   }
@@ -910,7 +945,9 @@
     removeLegacyDemoData();
     const now = new Date();
     $("#todayLabel").textContent = now.toLocaleDateString("en-GH", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).toUpperCase();
-    const savedConfig = JSON.parse(localStorage.getItem("pcg_supabase") || "null");
+    const runtimeConfigurationAllowed = window.PCG_SUPABASE?.allowRuntimeConfiguration === true;
+    $("#runtimeDatabaseConfig").hidden = !runtimeConfigurationAllowed;
+    const savedConfig = runtimeConfigurationAllowed ? JSON.parse(localStorage.getItem("pcg_supabase") || "null") : null;
     if (savedConfig) { $("#supabaseForm [name=url]").value = savedConfig.url || ""; $("#supabaseForm [name=key]").value = savedConfig.anonKey || ""; }
     const church = JSON.parse(localStorage.getItem("pcg_church") || "null");
     if (church) Object.entries(church).forEach(([key, value]) => { const field = $(`#churchSettingsForm [name=${key}]`); if (field) field.value = value; });
