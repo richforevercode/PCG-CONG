@@ -27,7 +27,7 @@ To register a portal member, first create or select their record in **Membership
 
 The included Row Level Security policies check each active user's assigned role and permissions. User creation runs inside a Supabase Edge Function; never put a Supabase secret or `service_role` key in browser code.
 
-Before production deployment, complete every step in [SECURITY.md](SECURITY.md). In particular, set the exact `ALLOWED_ORIGINS` Edge Function secret, apply the security migration, enable hosted Auth MFA/session settings, review every Super Administrator, and ensure the hosting platform applies `_headers`.
+Before production deployment, complete every step in [SECURITY.md](SECURITY.md). In particular, set the exact `ALLOWED_ORIGINS` Edge Function secret, apply every security migration, mirror the hosted Auth password/session settings, review every Super Administrator, and ensure the hosting platform applies `_headers`.
 
 ## Features
 

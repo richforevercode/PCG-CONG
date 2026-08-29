@@ -23,16 +23,6 @@ const json = (body: unknown, status = 200, origin: string | null = null) => new 
   headers: { ...corsHeaders(origin), "Content-Type": "application/json", "Cache-Control": "no-store" },
 });
 
-const jwtClaims = (token: string) => {
-  try {
-    const payload = token.split(".")[1];
-    if (!payload) return {} as Record<string, unknown>;
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    return JSON.parse(atob(normalized)) as Record<string, unknown>;
-  } catch (_) {
-    return {} as Record<string, unknown>;
-  }
-};
 const strongPassword = (password: string) => password.length >= 12
   && password.length <= 128
   && /[a-z]/.test(password)
@@ -61,10 +51,6 @@ Deno.serve(async (request) => {
     });
     const { data: authData, error: authError } = await admin.auth.getUser(token);
     if (authError || !authData.user) return json({ error: "Your session is no longer valid." }, 401, origin);
-    if (jwtClaims(token).aal !== "aal2") {
-      return json({ error: "Multi-factor authentication is required for user administration." }, 403, origin);
-    }
-
     const audit = async (action: string, entityId: string, metadata: Record<string, unknown> = {}) => {
       const { error } = await admin.from("security_audit_log").insert({
         actor_id: authData.user.id,

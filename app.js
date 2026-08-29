@@ -701,12 +701,6 @@
         location.replace("member-portal.html");
         return false;
       }
-      const { data: assurance, error: assuranceError } = await client.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (assuranceError) throw assuranceError;
-      if (assurance.currentLevel !== "aal2") {
-        location.replace("signin.html?reason=mfa");
-        return false;
-      }
       state.userProfile = userProfile;
       state.permissions = assignedRole?.permissions || [];
 
