@@ -31,6 +31,7 @@
     generationalGroupsInitialized: false,
     attendanceInitialized: false,
     pastoralCareInitialized: false,
+    lifeEventRegistersInitialized: false,
     communionInitialized: false,
     announcementsInitialized: false,
     churchHistoryInitialized: false,
@@ -69,6 +70,7 @@
     dashboard: "dashboard.view",
     members: "members.view",
     pastoral: "pastoral.view",
+    registers: "registers.view",
     attendance: "attendance.view",
     communion: "communion.view",
     finance: "finance.view",
@@ -165,7 +167,7 @@
     $$('[data-action="add-transaction"]').forEach(element => { element.hidden = !hasPermission("finance.manage"); });
     $$('[data-action="add-event"]').forEach(element => { element.hidden = !hasPermission("events.manage"); });
     $$('[data-action="add-attendance"]').forEach(element => { element.hidden = !hasPermission("attendance.manage"); });
-    $("#quickAddBtn").hidden = !["members.manage", "pastoral.manage", "attendance.manage", "communion.manage", "finance.manage", "events.manage"].some(hasPermission);
+    $("#quickAddBtn").hidden = !["members.manage", "pastoral.manage", "registers.manage", "attendance.manage", "communion.manage", "finance.manage", "events.manage"].some(hasPermission);
     const settingsProfileAction = $('[data-profile-action="settings"]');
     if (settingsProfileAction) settingsProfileAction.hidden = !hasPermission("settings.manage");
   }
@@ -389,6 +391,7 @@
     renderReports();
     renderNotifications();
     window.PastoralCareModule?.syncMembers(state.members);
+    window.LifeEventRegisters?.syncMembers(state.members);
     refreshIcons();
   }
 
@@ -509,9 +512,10 @@
       <div class="member-profile-field classification"><span>Age-based group</span><strong>${esc(presentation.label)}</strong><small><i data-lucide="sparkles"></i>Automatically determined from date of birth and the church's active rules</small></div>
       <div class="member-profile-field"><span>Actual fellowship / department</span><strong>${esc(member.group_name || "None recorded")}</strong></div>
       <div class="member-profile-field"><span>Contact</span><strong>${esc(member.phone || member.email || "None recorded")}</strong></div>
-    </div>${window.PastoralCareModule?.memberCaseMarkup(member.id) || ""}${window.CommunionModule?.memberHistoryMarkup(member.id) || ""}${memberGivingMarkup(member.id)}`;
+    </div>${window.PastoralCareModule?.memberCaseMarkup(member.id) || ""}${window.LifeEventRegisters?.memberHistoryMarkup(member.id) || ""}${window.CommunionModule?.memberHistoryMarkup(member.id) || ""}${memberGivingMarkup(member.id)}`;
     $("#editMemberFromProfile").hidden = !hasPermission("members.manage");
     $("#startPastoralCareFromProfile").hidden = !hasPermission("pastoral.manage");
+    $("#addLifeEventFromProfile").hidden = !hasPermission("registers.manage");
     $("#memberProfileDialog").showModal();
     refreshIcons();
   }
@@ -760,6 +764,15 @@
         });
         state.pastoralCareInitialized = true;
       }
+      if (!state.lifeEventRegistersInitialized && window.LifeEventRegisters && hasPermission("registers.view")) {
+        await window.LifeEventRegisters.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions,
+          members: state.members
+        });
+        state.lifeEventRegistersInitialized = true;
+      }
       if (!state.communionInitialized && window.CommunionModule && hasPermission("communion.view")) {
         await window.CommunionModule.initialize({
           client,
@@ -907,6 +920,12 @@
         navigate("pastoral");
         window.PastoralCareModule?.openCase(memberId);
       }
+      if (event.target.closest("#addLifeEventFromProfile")) {
+        const memberId = state.viewingMemberId;
+        $("#memberProfileDialog").close();
+        navigate("registers");
+        window.LifeEventRegisters?.openRecord(memberId);
+      }
       const communionHistoryButton = event.target.closest("[data-member-communion-occasion]");
       if (communionHistoryButton) {
         $("#memberProfileDialog").close();
@@ -929,6 +948,7 @@
     });
     $("#quickAddBtn").addEventListener("click", () => {
       if (state.page === "pastoral") return window.PastoralCareModule?.openCase();
+      if (state.page === "registers") return window.LifeEventRegisters?.openRecord();
       if (state.page === "attendance") return window.AttendanceModule?.openTakeAttendance();
       if (state.page === "communion") return window.CommunionModule?.openOccasion();
       if (state.page === "finance") return window.FinanceModule?.openCollection();

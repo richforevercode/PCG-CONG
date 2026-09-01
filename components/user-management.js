@@ -12,6 +12,8 @@
       ["pastoral.view", "View pastoral care", "Read pastoral care cases and permitted follow-up activity."],
       ["pastoral.manage", "Manage pastoral care", "Open, assign, update, and complete pastoral care cases."],
       ["pastoral.confidential", "View confidential pastoral notes", "Access protected counselling and sensitive care notes; management permission is also required to record them."],
+      ["registers.view", "View baptism & life events", "Read the congregation's baptism and life-event registers."],
+      ["registers.manage", "Manage baptism & life events", "Create, correct, void, and restore permanent register entries."],
       ["events.view", "View events", "See programmes and calendar entries."],
       ["events.manage", "Manage events", "Create and update church programmes."],
       ["attendance.view", "View attendance", "See service attendance records."],
@@ -225,6 +227,8 @@
     const selectedPermissions = new Set(formData.getAll("permissions"));
     if (selectedPermissions.has("pastoral.manage") || selectedPermissions.has("pastoral.confidential")) selectedPermissions.add("pastoral.view");
     if (selectedPermissions.has("pastoral.view")) selectedPermissions.add("members.view");
+    if (selectedPermissions.has("registers.manage")) selectedPermissions.add("registers.view");
+    if (selectedPermissions.has("registers.view")) selectedPermissions.add("members.view");
     const payload = { name: formData.get("name").trim(), description: formData.get("description").trim(), permissions: Array.from(selectedPermissions), is_system: false, updated_at: new Date().toISOString() };
     if (!payload.permissions.length) return notify("Select at least one permission for this role.", "error");
     const query = roleId ? state.client.from("app_roles").update(payload).eq("id", roleId) : state.client.from("app_roles").insert(payload);

@@ -51,8 +51,11 @@ Before production deployment, complete every step in [SECURITY.md](SECURITY.md).
 - Administrator workflows for targeted announcements and member-submitted profile correction requests
 - Publishable Church History with founding details, a narrative, HTTPS photographs, an ordered milestone timeline, administrator permissions, and a read-only Member Portal view
 - Secure Pastoral Care with member and visitor cases, caregiver assignment, priority and overdue tracking, follow-up timelines, and separately protected confidential notes
+- Permanent Baptism and Life Event registers for baptisms, confirmations, marriages, child dedications, membership receptions and transfers, and funerals, with linked member history, CSV export, printable records, certificate references, role permissions, and audit-safe voiding
 
 ## Project files
+
+- `components/life-event-registers.js` and `components/life-event-registers.css` — baptism and congregational life-event register workflows
 
 - `member-signin.html` and `components/member-signin.*` — dedicated Member Portal authentication
 - `member-portal.html` and `components/member-portal.*` — private member experience and personal record views

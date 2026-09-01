@@ -24,6 +24,7 @@
         <button class="nav-item active" data-page="dashboard" data-requires="dashboard.view"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
         <button class="nav-item" data-page="members" data-requires="members.view"><i data-lucide="users"></i><span>Membership</span><b id="memberNavCount">0</b></button>
         <button class="nav-item" data-page="pastoral" data-requires="pastoral.view"><i data-lucide="heart-handshake"></i><span>Pastoral Care</span></button>
+        <button class="nav-item" data-page="registers" data-requires="registers.view"><i data-lucide="book-open-check"></i><span>Baptism &amp; Life Events</span></button>
         <button class="nav-item" data-page="attendance" data-requires="attendance.view"><i data-lucide="clipboard-check"></i><span>Attendance</span></button>
         <button class="nav-item" data-page="communion" data-requires="communion.view"><i data-lucide="church"></i><span>Communion</span></button>
         <div class="finance-nav-group" data-requires="finance.view">

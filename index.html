@@ -29,6 +29,7 @@
   <link rel="stylesheet" href="components/announcements.css?v=20260820-1" />
   <link rel="stylesheet" href="components/church-history.css?v=20260901-1" />
   <link rel="stylesheet" href="components/pastoral-care.css?v=20260901-1" />
+  <link rel="stylesheet" href="components/life-event-registers.css?v=20260901-1" />
 </head>
 
 <body>
@@ -193,6 +194,10 @@
 
         <section class="page" id="page-pastoral" data-page-title="Pastoral Care">
           <div id="pastoralCareModuleRoot"></div>
+        </section>
+
+        <section class="page" id="page-registers" data-page-title="Baptism &amp; Life Events">
+          <div id="lifeEventRegistersRoot"></div>
         </section>
 
         <section class="page" id="page-attendance" data-page-title="Attendance">
@@ -579,6 +584,8 @@
       <button class="secondary-btn" type="button" data-close-member-profile>Close</button>
       <button class="secondary-btn" id="startPastoralCareFromProfile" type="button" data-requires="pastoral.manage"><i
           data-lucide="heart-handshake"></i> Open care case</button>
+      <button class="secondary-btn" id="addLifeEventFromProfile" type="button" data-requires="registers.manage"><i
+          data-lucide="book-plus"></i> Add life event</button>
       <button class="primary-btn" id="editMemberFromProfile" type="button" data-requires="members.manage"><i
           data-lucide="pencil"></i> Edit member</button>
     </div>
@@ -766,12 +773,40 @@
     </form>
   </dialog>
 
-  <script src="components/sidebar.js?v=20260901-2"></script>
+  <dialog id="lifeEventDialog" class="management-dialog life-event-dialog" aria-labelledby="lifeEventDialogTitle">
+    <form id="lifeEventForm">
+      <div class="dialog-header"><div><p class="eyebrow">CHURCH REGISTER</p><h3 id="lifeEventDialogTitle">New register entry</h3></div><button class="icon-btn" type="button" data-close-life-event-dialog aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="dialog-body"><input type="hidden" name="record_id" />
+        <p class="life-form-section">Person &amp; event</p>
+        <label class="full">Linked membership record<select name="member_id"></select><small class="field-note">Optional. Link the event to a member profile or leave it unlinked for an external person.</small></label>
+        <label class="full">Person's full name<input name="person_name" required maxlength="200" placeholder="Name exactly as it should appear in the register" /></label>
+        <label>Life event<select name="event_type" required><option>Baptism</option><option>Confirmation</option><option>Marriage</option><option>Child Dedication</option><option>Reception into Membership</option><option>Transfer In</option><option>Transfer Out</option><option>Funeral / Memorial</option></select></label>
+        <label>Event date<input name="event_date" type="date" required /></label>
+        <label>Date of birth<input name="date_of_birth" type="date" /></label>
+        <label data-life-events="Baptism" data-life-required>Baptism type<select name="baptism_type"><option>Infant</option><option>Adult</option></select></label>
+        <label class="full" data-life-events="Marriage" data-life-required>Spouse's full name<input name="related_person_name" maxlength="200" placeholder="Name exactly as it should appear in the register" /></label>
+        <label class="full" data-life-events="Baptism|Child Dedication">Parents / guardians<input name="parents_guardians" maxlength="500" placeholder="Names of parents or guardians" /></label>
+        <label class="full" data-life-events="Baptism|Confirmation|Marriage">Sponsors / witnesses<input name="sponsors_witnesses" maxlength="500" placeholder="Names of sponsors, godparents, or witnesses" /></label>
+        <label class="full" data-life-events="Reception into Membership|Transfer In">Previous congregation<input name="previous_congregation" maxlength="300" placeholder="Congregation and district, if known" /></label>
+        <label class="full" data-life-events="Transfer Out">Destination congregation<input name="destination_congregation" maxlength="300" placeholder="Receiving congregation and district" /></label>
+        <p class="life-form-section">Official record</p>
+        <label>Register number<input name="register_number" required maxlength="100" placeholder="e.g. BAP-2026-001" /></label>
+        <label>Certificate number<input name="certificate_number" maxlength="100" placeholder="Optional certificate reference" /></label>
+        <label>Officiant<input name="officiant" maxlength="200" placeholder="Minister or officiating officer" /></label>
+        <label>Location<input name="location" maxlength="200" placeholder="Church or service location" /></label>
+        <label class="full">Notes<textarea name="notes" maxlength="3000" rows="4" placeholder="Optional administrative notes for this register entry"></textarea></label>
+      </div>
+      <div class="dialog-footer"><button class="secondary-btn" type="button" data-close-life-event-dialog>Cancel</button><button class="primary-btn" id="saveLifeEvent" type="submit">Record life event</button></div>
+    </form>
+  </dialog>
+
+  <script src="components/sidebar.js?v=20260901-3"></script>
   <script src="components/profile.js"></script>
-  <script src="components/user-management.js?v=20260901-2"></script>
+  <script src="components/user-management.js?v=20260901-3"></script>
   <script src="components/announcements.js?v=20260820-1"></script>
   <script src="components/church-history.js?v=20260901-1"></script>
   <script src="components/pastoral-care.js?v=20260901-1"></script>
+  <script src="components/life-event-registers.js?v=20260901-1"></script>
   <script src="components/member-profile-requests.js?v=20260820-1"></script>
   <script src="components/generational-groups.js"></script>
   <script src="components/attendance.js"></script>
@@ -780,7 +815,7 @@
   <script src="assets/vendor/lucide-0.468.0.min.js"></script>
   <script src="assets/vendor/supabase-js-2.112.4.min.js"></script>
   <script src="config.js"></script>
-  <script src="app.js?v=20260901-2"></script>
+  <script src="app.js?v=20260901-3"></script>
 </body>
 
 </html>
