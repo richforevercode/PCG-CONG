@@ -16,7 +16,9 @@
       ["communion.view", "View Communion", "Read Communion occasions, registers, and member history."],
       ["communion.manage", "Manage Communion", "Create occasions and maintain Communion registers."],
       ["announcements.view", "View announcements", "Read all published and draft church announcements."],
-      ["announcements.manage", "Manage announcements", "Publish, edit, target, and archive church announcements."]
+      ["announcements.manage", "Manage announcements", "Publish, edit, target, and archive church announcements."],
+      ["history.view", "View church history", "Read the congregation story and all draft or published milestones."],
+      ["history.manage", "Manage church history", "Edit, publish, and maintain the congregation history and timeline."]
     ]},
     { name: "Finance", items: [
       ["finance.view", "View finance", "Read collections, balances, expenses, and reports."],

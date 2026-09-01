@@ -58,6 +58,7 @@
         </div>
         <button class="nav-item" data-page="events" data-requires="events.view"><i data-lucide="calendar-days"></i><span>Events</span></button>
         <button class="nav-item" data-page="announcements" data-requires="announcements.view"><i data-lucide="megaphone"></i><span>Announcements</span></button>
+        <button class="nav-item" data-page="history" data-requires="history.view"><i data-lucide="landmark"></i><span>Church History</span></button>
         <button class="nav-item" data-page="reports" data-requires="reports.view"><i data-lucide="chart-no-axes-combined"></i><span>Reports</span></button>
         <button class="nav-item" data-page="users" data-requires="users.manage"><i data-lucide="shield-user"></i><span>Users & roles</span></button>
       </nav>

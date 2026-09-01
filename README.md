@@ -49,6 +49,7 @@ Before production deployment, complete every step in [SECURITY.md](SECURITY.md).
 - Separate mobile-friendly Member Portal for personal profile, giving, pledges, Communion, individual attendance, targeted events, announcements, fellowship information, and account settings
 - Database-enforced one-account-to-one-member linkage and own-record-only RLS policies
 - Administrator workflows for targeted announcements and member-submitted profile correction requests
+- Publishable Church History with founding details, a narrative, HTTPS photographs, an ordered milestone timeline, administrator permissions, and a read-only Member Portal view
 
 ## Project files
 

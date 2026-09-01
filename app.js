@@ -32,6 +32,7 @@
     attendanceInitialized: false,
     communionInitialized: false,
     announcementsInitialized: false,
+    churchHistoryInitialized: false,
     memberProfileRequestsInitialized: false,
     financeInitialized: false
   };
@@ -71,6 +72,7 @@
     finance: "finance.view",
     events: "events.view",
     announcements: "announcements.view",
+    history: "history.view",
     reports: "reports.view",
     users: "users.manage",
     settings: "settings.manage"
@@ -773,6 +775,14 @@
           permissions: state.permissions
         });
         state.announcementsInitialized = true;
+      }
+      if (!state.churchHistoryInitialized && window.ChurchHistoryModule && hasPermission("history.view")) {
+        await window.ChurchHistoryModule.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions
+        });
+        state.churchHistoryInitialized = true;
       }
       if (!state.memberProfileRequestsInitialized && window.MemberProfileRequests && hasPermission("members.manage")) {
         await window.MemberProfileRequests.initialize({ client, permissions: state.permissions });

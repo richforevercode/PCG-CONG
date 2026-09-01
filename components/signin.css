@@ -34,7 +34,7 @@ button { cursor: pointer; }
 .brand-reference { color: #aebfe4; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
 .brand-footer { position: absolute; bottom: 32px; left: clamp(42px, 6vw, 90px); z-index: 1; margin: 0; color: #91a8d5; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
 
-.signin-panel { display: flex; width: 100%; min-width: 0; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; padding: 52px clamp(28px, 7vw, 110px) 28px; background: #fff; }
+.signin-panel { display: flex; width: 100%; min-width: 0; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; padding: 28px clamp(28px, 7vw, 110px) 20px; background: #fff; }
 .signin-card { width: min(460px, 100%); min-width: 0; }
 .mobile-brand { display: none; }
 .secure-badge { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 25px; padding: 6px 10px; color: #175cd3; background: #eff4ff; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
@@ -64,7 +64,7 @@ button { cursor: pointer; }
 .member-portal-link { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; color: var(--blue-700); font-size: 13px; font-weight: 700; text-decoration: none; }
 .member-portal-link:hover { text-decoration: underline; }
 .member-portal-link svg { width: 18px; height: 18px; }
-.signin-copyright { margin: auto 0 0; padding-top: 48px; color: #98a2b3; font-size: 11px; }
+.signin-copyright { margin: 24px 0 0; color: #98a2b3; font-size: 11px; text-align: center; }
 
 @media (max-width: 900px) {
   .signin-shell { grid-template-columns: 1fr; }
@@ -83,7 +83,7 @@ button { cursor: pointer; }
   .signin-card, .mobile-brand { width: 100%; }
   .mobile-brand { margin-bottom: 42px; }
   .signin-heading p { margin-bottom: 26px; }
-  .signin-copyright { padding-top: 40px; }
+  .signin-copyright { margin-top: 40px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

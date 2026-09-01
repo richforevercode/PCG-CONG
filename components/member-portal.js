@@ -15,8 +15,8 @@
   const longDateFormat = new Intl.DateTimeFormat("en-GH", { day: "numeric", month: "long", year: "numeric" });
   const monthFormat = new Intl.DateTimeFormat("en-GH", { month: "long", year: "numeric" });
   const money = new Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS", minimumFractionDigits: 2 });
-  const pageNames = { dashboard: "Dashboard", profile: "My Profile", giving: "My Giving", pledges: "My Pledges", communion: "My Communion", attendance: "My Attendance", events: "Events & Calendar", announcements: "Announcements", fellowship: "My Fellowship", settings: "Settings" };
-  const state = { user: null, profile: null, member: null, role: null, giving: [], communion: [], attendance: [], events: [], announcements: [], groups: [], rsvps: [], requests: [], preferences: null, page: "dashboard", givingCategory: "all", givingFrom: "", givingTo: "" };
+  const pageNames = { dashboard: "Dashboard", profile: "My Profile", giving: "My Giving", pledges: "My Pledges", communion: "My Communion", attendance: "My Attendance", events: "Events & Calendar", announcements: "Announcements", history: "Church History", fellowship: "My Fellowship", settings: "Settings" };
+  const state = { user: null, profile: null, member: null, role: null, giving: [], communion: [], attendance: [], events: [], announcements: [], groups: [], rsvps: [], requests: [], preferences: null, history: null, historyMilestones: [], page: "dashboard", givingCategory: "all", givingFrom: "", givingTo: "" };
 
   function icons() { window.lucide?.createIcons({ attrs: { "stroke-width": 1.8 } }); }
   function formatDate(value, long = false) { return value ? (long ? longDateFormat : dateFormat).format(dateFromIso(value)) : "Not recorded"; }
@@ -35,6 +35,7 @@
   function summaryCard(label, value, note, icon, tone = "#0a3995") { return `<article class="member-summary-card" style="--tone:${tone}"><span>${esc(label)}<i data-lucide="${icon}"></i></span><strong>${esc(value)}</strong><small>${esc(note)}</small></article>`; }
   function avatarMarkup(className = "member-profile-avatar") { return `<span class="${className}">${state.member?.profile_photo_url ? `<img src="${esc(state.member.profile_photo_url)}" alt="${esc(fullName())}" />` : esc(initials())}</span>`; }
   function fellowshipLogoMarkup(logo, className = "") { return `<span class="member-fellowship-brand-logo ${className} ${logo.shapeClass}"><img src="${logo.src}" alt="${logo.alt}" decoding="async" /></span>`; }
+  function secureImageUrl(value) { try { const parsed = new URL(String(value || "")); return parsed.protocol === "https:" ? parsed.href : ""; } catch (_) { return ""; } }
 
   function classification() {
     if (!state.member?.date_of_birth) return { name: "Not classified", description: "A date of birth is required for automatic classification." };
@@ -132,13 +133,33 @@
     return `${pageHeading("MY CHURCH COMMUNITY", "My Fellowship", "Your official fellowship and generational classification are maintained by authorized church officers.")}<article class="member-card member-fellowship-card">${fellowshipMark}<div><h2>${esc(fellowship)}</h2><p>${esc(state.member.group_name ? "Your recorded fellowship or department." : group.description)}</p><div class="member-fellowship-tags"><span>Generational group: ${esc(group.name)}</span><span>${esc(state.member.gender)}</span><span>${esc(state.member.status)}</span></div></div></article><div class="member-two-column" style="margin-top:18px"><article class="member-card"><div class="member-card-heading"><div><p>ACTIVITIES</p><h2>Relevant upcoming events</h2></div></div>${eventListMarkup(relevantEvents.slice(0, 6))}</article><article class="member-card"><div class="member-card-heading"><div><p>UPDATES</p><h2>Fellowship announcements</h2></div></div>${announcementListMarkup(relevantAnnouncements.slice(0, 5))}</article></div>`;
   }
 
+  function historyMarkup() {
+    const history = state.history;
+    if (!history) return `${pageHeading("CONGREGATION HERITAGE", "Church History", "Discover the people and moments that shaped Resurrection Congregation.")}${empty("landmark", "History coming soon", "The congregation's historical record has not been published yet.")}`;
+    const hero = secureImageUrl(history.hero_image_url);
+    const milestones = state.historyMilestones;
+    const founding = history.founding_date ? formatDate(history.founding_date, true) : "Not yet recorded";
+    return `${pageHeading("CONGREGATION HERITAGE", history.title || "Church History", "Discover the people and moments that shaped Resurrection Congregation.")}
+      <section class="member-history-hero">
+        ${hero ? `<figure><img src="${esc(hero)}" alt="${esc(history.hero_image_caption || history.title)}" /><figcaption>${esc(history.hero_image_caption)}</figcaption></figure>` : `<div class="member-history-crest"><img src="assets/pcg-crest.png" alt="" /></div>`}
+        <div><p>OUR SHARED STORY</p><h1>${esc(history.title)}</h1><strong>${esc(history.subtitle)}</strong><span>${esc(history.summary || "The story of Resurrection Congregation and its continuing ministry.")}</span></div>
+      </section>
+      <div class="member-history-layout">
+        <article class="member-card member-history-story"><div class="member-card-heading"><div><p>OUR JOURNEY</p><h2>From our beginnings to today</h2></div></div><div class="member-history-story-copy">${esc(history.story || "The detailed history will be added soon.")}</div></article>
+        <aside class="member-history-facts"><article><i data-lucide="calendar-heart"></i><span><small>Founded</small><strong>${esc(founding)}</strong></span></article>${history.founding_members ? `<article><i data-lucide="users-round"></i><span><small>Founding members</small><strong>${esc(history.founding_members)}</strong></span></article>` : ""}<article><i data-lucide="church"></i><span><small>Congregation</small><strong>Resurrection Congregation</strong></span></article></aside>
+      </div>
+      <section class="member-history-timeline"><div class="member-history-section-heading"><p>MILESTONE TIMELINE</p><h2>Moments that shaped our congregation</h2><span>${milestones.length ? "A chronological record of significant moments in our shared journey." : "Historical milestones will appear here as they are published."}</span></div>
+        <div class="member-history-milestones">${milestones.length ? milestones.map(item => { const photo = secureImageUrl(item.image_url); return `<article><div class="member-history-year">${esc(item.event_year)}</div><div class="member-history-dot"></div><div class="member-history-milestone-card">${photo ? `<figure><img src="${esc(photo)}" alt="${esc(item.image_caption || item.title)}" /><figcaption>${esc(item.image_caption)}</figcaption></figure>` : ""}<div><time>${item.event_date ? esc(formatDate(item.event_date, true)) : esc(item.event_year)}</time><h3>${esc(item.title)}</h3><p>${esc(item.description)}</p></div></div></article>`; }).join("") : empty("milestone", "No milestones published", "The congregation timeline is still being prepared.")}</div>
+      </section>`;
+  }
+
   function settingsMarkup() {
     const preferences = state.preferences || { email_notifications: true, event_reminders: true, communion_updates: true };
     return `${pageHeading("ACCOUNT & SECURITY", "Settings", "Manage your password and personal notification preferences securely.")}<div class="member-settings-grid"><article class="member-card"><div class="member-card-heading"><div><p>NOTIFICATIONS</p><h2>Communication preferences</h2><span>Choose the updates you would like to receive.</span></div></div><form class="member-settings-form" id="memberPreferencesForm"><label class="member-setting-toggle"><span><strong>Email notifications</strong><small>General church and account messages.</small></span><input name="email_notifications" type="checkbox" ${preferences.email_notifications ? "checked" : ""} /></label><label class="member-setting-toggle"><span><strong>Event reminders</strong><small>Reminders for relevant upcoming events.</small></span><input name="event_reminders" type="checkbox" ${preferences.event_reminders ? "checked" : ""} /></label><label class="member-setting-toggle"><span><strong>Communion updates</strong><small>Notifications related to your Communion record.</small></span><input name="communion_updates" type="checkbox" ${preferences.communion_updates ? "checked" : ""} /></label><button class="member-button primary" type="submit">Save preferences</button></form></article><article class="member-card"><div class="member-card-heading"><div><p>SECURITY</p><h2>Change password</h2><span>Use 12–128 characters with uppercase, lowercase, a number, and a symbol.</span></div></div><form class="member-settings-form" id="memberPasswordForm"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required placeholder="12–128 characters" /></label><label>Confirm new password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required /></label><p class="member-form-error" id="memberPasswordError" hidden></p><button class="member-button primary" type="submit"><i data-lucide="key-round"></i> Update password</button><button class="member-button secondary" type="button" data-signout-other-sessions><i data-lucide="shield-x"></i> Sign out other sessions</button></form></article></div>`;
   }
 
   function render() {
-    const renderers = { dashboard: dashboardMarkup, profile: profileMarkup, giving: givingMarkup, pledges: pledgesMarkup, communion: communionMarkup, attendance: attendanceMarkup, events: eventsMarkup, announcements: announcementsMarkup, fellowship: fellowshipMarkup, settings: settingsMarkup };
+    const renderers = { dashboard: dashboardMarkup, profile: profileMarkup, giving: givingMarkup, pledges: pledgesMarkup, communion: communionMarkup, attendance: attendanceMarkup, events: eventsMarkup, announcements: announcementsMarkup, history: historyMarkup, fellowship: fellowshipMarkup, settings: settingsMarkup };
     const content = $("#memberPortalContent"); content.innerHTML = renderers[state.page](); content.hidden = false;
     $("#memberTopbarTitle").textContent = pageNames[state.page];
     $$('[data-member-page]').forEach(button => button.classList.toggle("active", button.dataset.memberPage === state.page));
@@ -166,11 +187,18 @@
       client.from("generational_groups").select("id,name,minimum_age,maximum_age,gender,status,description").eq("status", "Active"),
       client.from("event_rsvps").select("id,event_id,member_id,response").eq("member_id", memberId),
       client.from("member_profile_update_requests").select("id,member_id,requested_changes,reason,status,review_notes,created_at,reviewed_at").eq("member_id", memberId),
-      client.from("member_portal_preferences").select("user_id,email_notifications,event_reminders,communion_updates").eq("user_id", state.user.id).maybeSingle()
+      client.from("member_portal_preferences").select("user_id,email_notifications,event_reminders,communion_updates").eq("user_id", state.user.id).maybeSingle(),
+      client.from("church_history").select("id,title,subtitle,founding_date,founding_members,summary,story,hero_image_url,hero_image_caption,is_published").eq("id", 1).maybeSingle(),
+      client.from("church_history_milestones").select("id,event_year,event_date,title,description,image_url,image_caption,display_order,is_published").order("display_order").order("event_year").order("event_date")
     ]);
-    const failure = results.find(result => result.error);
+    const failure = results.slice(0, 10).find(result => result.error);
     if (failure) throw new Error(`${failure.error.message} Confirm the Member Portal database migration has been applied.`);
-    [state.member, state.giving, state.communion, state.attendance, state.events, state.announcements, state.groups, state.rsvps, state.requests, state.preferences] = [results[0].data, results[1].data || [], results[2].data || [], results[3].data || [], results[4].data || [], results[5].data || [], results[6].data || [], results[7].data || [], results[8].data || [], results[9].data || null];
+    [state.member, state.giving, state.communion, state.attendance, state.events, state.announcements, state.groups, state.rsvps, state.requests, state.preferences, state.history, state.historyMilestones] = [results[0].data, results[1].data || [], results[2].data || [], results[3].data || [], results[4].data || [], results[5].data || [], results[6].data || [], results[7].data || [], results[8].data || [], results[9].data || null, results[10].data || null, results[11].data || []];
+    if (results[10].error || results[11].error) {
+      state.history = null;
+      state.historyMilestones = [];
+      console.error("Church History is unavailable until its database migration is applied.", results[10].error || results[11].error);
+    }
   }
 
   function syncIdentity() {
