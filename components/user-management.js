@@ -34,6 +34,8 @@
       ["finance.audit", "View finance audit trail", "Read immutable financial accountability history."]
     ]},
     { name: "Administration", items: [
+      ["property.view", "View assets & facilities", "Read inventory, facilities, maintenance, and booking registers."],
+      ["property.manage", "Manage assets & facilities", "Maintain property records, maintenance work, and facility bookings."],
       ["settings.manage", "Manage settings", "Update congregation and connection settings."],
       ["users.manage", "Manage users", "Create accounts and allocate ordinary roles."],
       ["roles.manage", "Manage roles", "Create roles and assign Super Administrator access."]
@@ -229,6 +231,7 @@
     if (selectedPermissions.has("pastoral.view")) selectedPermissions.add("members.view");
     if (selectedPermissions.has("registers.manage")) selectedPermissions.add("registers.view");
     if (selectedPermissions.has("registers.view")) selectedPermissions.add("members.view");
+    if (selectedPermissions.has("property.manage")) selectedPermissions.add("property.view");
     const payload = { name: formData.get("name").trim(), description: formData.get("description").trim(), permissions: Array.from(selectedPermissions), is_system: false, updated_at: new Date().toISOString() };
     if (!payload.permissions.length) return notify("Select at least one permission for this role.", "error");
     const query = roleId ? state.client.from("app_roles").update(payload).eq("id", roleId) : state.client.from("app_roles").insert(payload);

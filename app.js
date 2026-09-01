@@ -36,7 +36,8 @@
     announcementsInitialized: false,
     churchHistoryInitialized: false,
     memberProfileRequestsInitialized: false,
-    financeInitialized: false
+    financeInitialized: false,
+    propertyManagementInitialized: false
   };
 
   const $ = (selector, scope = document) => scope.querySelector(selector);
@@ -74,6 +75,7 @@
     attendance: "attendance.view",
     communion: "communion.view",
     finance: "finance.view",
+    property: "property.view",
     events: "events.view",
     announcements: "announcements.view",
     history: "history.view",
@@ -167,7 +169,7 @@
     $$('[data-action="add-transaction"]').forEach(element => { element.hidden = !hasPermission("finance.manage"); });
     $$('[data-action="add-event"]').forEach(element => { element.hidden = !hasPermission("events.manage"); });
     $$('[data-action="add-attendance"]').forEach(element => { element.hidden = !hasPermission("attendance.manage"); });
-    $("#quickAddBtn").hidden = !["members.manage", "pastoral.manage", "registers.manage", "attendance.manage", "communion.manage", "finance.manage", "events.manage"].some(hasPermission);
+    $("#quickAddBtn").hidden = !["members.manage", "pastoral.manage", "registers.manage", "attendance.manage", "communion.manage", "finance.manage", "property.manage", "events.manage"].some(hasPermission);
     const settingsProfileAction = $('[data-profile-action="settings"]');
     if (settingsProfileAction) settingsProfileAction.hidden = !hasPermission("settings.manage");
   }
@@ -392,6 +394,7 @@
     renderNotifications();
     window.PastoralCareModule?.syncMembers(state.members);
     window.LifeEventRegisters?.syncMembers(state.members);
+    window.PropertyManagement?.syncEvents(state.events);
     refreshIcons();
   }
 
@@ -794,6 +797,15 @@
         });
         state.financeInitialized = true;
       }
+      if (!state.propertyManagementInitialized && window.PropertyManagement && hasPermission("property.view")) {
+        await window.PropertyManagement.initialize({
+          client,
+          userId: state.user.id,
+          permissions: state.permissions,
+          events: state.events
+        });
+        state.propertyManagementInitialized = true;
+      }
       if (!state.announcementsInitialized && window.AnnouncementsModule && hasPermission("announcements.view")) {
         await window.AnnouncementsModule.initialize({
           client,
@@ -952,6 +964,7 @@
       if (state.page === "attendance") return window.AttendanceModule?.openTakeAttendance();
       if (state.page === "communion") return window.CommunionModule?.openOccasion();
       if (state.page === "finance") return window.FinanceModule?.openCollection();
+      if (state.page === "property") return window.PropertyManagement?.openPrimary();
       openDialog(state.page === "finance" ? "transaction" : state.page === "events" ? "event" : "member");
     });
     $("#exportMembers").addEventListener("click", () => exportCsv("resurrection-members.csv", state.members.map(member => {

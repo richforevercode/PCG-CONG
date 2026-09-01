@@ -58,6 +58,7 @@
             <button data-page="finance" data-finance-section="audit">Audit Trail</button>
           </div>
         </div>
+        <button class="nav-item" data-page="property" data-requires="property.view"><i data-lucide="warehouse"></i><span>Assets &amp; Facilities</span></button>
         <button class="nav-item" data-page="events" data-requires="events.view"><i data-lucide="calendar-days"></i><span>Events</span></button>
         <button class="nav-item" data-page="announcements" data-requires="announcements.view"><i data-lucide="megaphone"></i><span>Announcements</span></button>
         <button class="nav-item" data-page="history" data-requires="history.view"><i data-lucide="landmark"></i><span>Church History</span></button>
