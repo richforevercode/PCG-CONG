@@ -9,6 +9,9 @@
     { name: "Church records", items: [
       ["members.view", "View membership", "Read member records and contact details."],
       ["members.manage", "Manage membership", "Add, edit, and remove member records."],
+      ["pastoral.view", "View pastoral care", "Read pastoral care cases and permitted follow-up activity."],
+      ["pastoral.manage", "Manage pastoral care", "Open, assign, update, and complete pastoral care cases."],
+      ["pastoral.confidential", "View confidential pastoral notes", "Access protected counselling and sensitive care notes; management permission is also required to record them."],
       ["events.view", "View events", "See programmes and calendar entries."],
       ["events.manage", "Manage events", "Create and update church programmes."],
       ["attendance.view", "View attendance", "See service attendance records."],
@@ -219,7 +222,10 @@
     if (!event.currentTarget.reportValidity()) return;
     const formData = new FormData(event.currentTarget);
     const roleId = formData.get("role_id");
-    const payload = { name: formData.get("name").trim(), description: formData.get("description").trim(), permissions: formData.getAll("permissions"), is_system: false, updated_at: new Date().toISOString() };
+    const selectedPermissions = new Set(formData.getAll("permissions"));
+    if (selectedPermissions.has("pastoral.manage") || selectedPermissions.has("pastoral.confidential")) selectedPermissions.add("pastoral.view");
+    if (selectedPermissions.has("pastoral.view")) selectedPermissions.add("members.view");
+    const payload = { name: formData.get("name").trim(), description: formData.get("description").trim(), permissions: Array.from(selectedPermissions), is_system: false, updated_at: new Date().toISOString() };
     if (!payload.permissions.length) return notify("Select at least one permission for this role.", "error");
     const query = roleId ? state.client.from("app_roles").update(payload).eq("id", roleId) : state.client.from("app_roles").insert(payload);
     const { error } = await query;

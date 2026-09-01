@@ -50,6 +50,7 @@ Before production deployment, complete every step in [SECURITY.md](SECURITY.md).
 - Database-enforced one-account-to-one-member linkage and own-record-only RLS policies
 - Administrator workflows for targeted announcements and member-submitted profile correction requests
 - Publishable Church History with founding details, a narrative, HTTPS photographs, an ordered milestone timeline, administrator permissions, and a read-only Member Portal view
+- Secure Pastoral Care with member and visitor cases, caregiver assignment, priority and overdue tracking, follow-up timelines, and separately protected confidential notes
 
 ## Project files
 
